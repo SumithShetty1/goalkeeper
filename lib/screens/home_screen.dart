@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
+import 'package:goalkeeper/screens/bucket_list_screen.dart';
 import 'package:goalkeeper/screens/create_goal_screen.dart';
 import 'package:goalkeeper/screens/group_goals_screen.dart';
 import 'package:goalkeeper/screens/profile_screen.dart';
@@ -13,26 +14,35 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<Widget> _pages = [
-    const BucketListScreen(),
-    const GroupGoalsScreen(),
-    const ProfileScreen(),
-  ];
-
   final List<Goal> _goals = [
     Goal(
       id: '1',
       title: 'Learn Flutter',
       description: 'Build a complete app',
       dueDate: DateTime.now().add(const Duration(days: 30)),
+      createdBy: 'currentUserId',
+      isGroupGoal: false,
     ),
     Goal(
       id: '2',
       title: 'Visit Japan',
       description: 'See cherry blossoms in Kyoto',
       dueDate: DateTime.now().add(const Duration(days: 180)),
+      createdBy: 'currentUserId',
+      isGroupGoal: false,
     ),
   ];
+
+  List<Widget> get _pages => [
+        BucketListScreen(
+          goals: _goals,
+          onUpdateGoal: _updateGoal,
+          onDeleteGoal: _deleteGoal,
+          onToggleComplete: _toggleGoalCompletion,
+        ),
+        const GroupGoalsScreen(),
+        const ProfileScreen(),
+      ];
 
   void _onTabTapped(int index) {
     setState(() {
@@ -43,6 +53,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void _addNewGoal(Goal newGoal) {
     setState(() {
       _goals.add(newGoal);
+    });
+  }
+
+  void _updateGoal(int index, Goal updatedGoal) {
+    setState(() {
+      _goals[index] = updatedGoal;
+    });
+  }
+
+  void _deleteGoal(int index) {
+    setState(() {
+      _goals.removeAt(index);
     });
   }
 
@@ -75,7 +97,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 final newGoal = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const CreateGoalScreen(),
+                    builder: (context) => CreateGoalScreen(
+                      currentUserId: 'currentUserId', // Replace with actual user ID
+                    ),
                   ),
                 );
                 if (newGoal != null) {
@@ -89,84 +113,13 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'My Goals',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Goals'),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_alt),
             label: 'Group Goals',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
-      ),
-    );
-  }
-}
-
-class BucketListScreen extends StatelessWidget {
-  const BucketListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-    
-    return ListView.builder(
-      itemCount: homeState?._goals.length ?? 0,
-      itemBuilder: (context, index) {
-        final goal = homeState!._goals[index];
-        return GoalCard(
-          goal: goal,
-          onToggleComplete: () => homeState._toggleGoalCompletion(index),
-        );
-      },
-    );
-  }
-}
-
-class GoalCard extends StatelessWidget {
-  final Goal goal;
-  final VoidCallback onToggleComplete;
-
-  const GoalCard({
-    super.key,
-    required this.goal,
-    required this.onToggleComplete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: ListTile(
-        leading: Checkbox(
-          value: goal.isCompleted,
-          onChanged: (_) => onToggleComplete(),
-        ),
-        title: Text(goal.title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(goal.description),
-            if (goal.dueDate != null)
-              Text(
-                'Due: ${goal.dueDate!.toString().split(' ')[0]}',
-                style: const TextStyle(color: Colors.grey),
-              ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.share),
-          onPressed: () {
-            // Implement share functionality
-          },
-        ),
-        onTap: () {
-          // Navigate to goal detail screen
-        },
       ),
     );
   }
