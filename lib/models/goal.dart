@@ -4,6 +4,10 @@ class Goal {
   final String description;
   final bool isCompleted;
   final DateTime? dueDate;
+  final DateTime createdAt;
+  final String createdBy; // User ID of creator
+  final bool isGroupGoal;
+  final List<String> participants; // List of user IDs who have access
 
   Goal({
     required this.id,
@@ -11,7 +15,11 @@ class Goal {
     required this.description,
     this.isCompleted = false,
     this.dueDate,
-  });
+    DateTime? createdAt,
+    required this.createdBy,
+    this.isGroupGoal = false,
+    this.participants = const [],
+  }) : createdAt = createdAt ?? DateTime.now();
 
   Goal copyWith({
     String? id,
@@ -19,6 +27,10 @@ class Goal {
     String? description,
     bool? isCompleted,
     DateTime? dueDate,
+    DateTime? createdAt,
+    String? createdBy,
+    bool? isGroupGoal,
+    List<String>? participants,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -26,6 +38,38 @@ class Goal {
       description: description ?? this.description,
       isCompleted: isCompleted ?? this.isCompleted,
       dueDate: dueDate ?? this.dueDate,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
+      isGroupGoal: isGroupGoal ?? this.isGroupGoal,
+      participants: participants ?? this.participants,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'isCompleted': isCompleted,
+      'dueDate': dueDate?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'createdBy': createdBy,
+      'isGroupGoal': isGroupGoal,
+      'participants': participants,
+    };
+  }
+
+  factory Goal.fromMap(Map<String, dynamic> map) {
+    return Goal(
+      id: map['id'],
+      title: map['title'],
+      description: map['description'],
+      isCompleted: map['isCompleted'],
+      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
+      createdAt: DateTime.parse(map['createdAt']),
+      createdBy: map['createdBy'],
+      isGroupGoal: map['isGroupGoal'],
+      participants: List<String>.from(map['participants']),
     );
   }
 }
