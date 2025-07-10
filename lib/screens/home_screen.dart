@@ -14,24 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<Goal> _goals = [
-    Goal(
-      id: '1',
-      title: 'Learn Flutter',
-      description: 'Build a complete app',
-      dueDate: DateTime.now().add(const Duration(days: 30)),
-      createdBy: 'currentUserId',
-      isGroupGoal: false,
-    ),
-    Goal(
-      id: '2',
-      title: 'Visit Japan',
-      description: 'See cherry blossoms in Kyoto',
-      dueDate: DateTime.now().add(const Duration(days: 180)),
-      createdBy: 'currentUserId',
-      isGroupGoal: false,
-    ),
-  ];
+  final List<Goal> _goals = [];
 
   List<Widget> get _pages => [
         BucketListScreen(
