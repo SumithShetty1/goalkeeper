@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
 import 'package:goalkeeper/screens/create_goal_screen.dart';
-import 'package:goalkeeper/screens/friends_screen.dart';
+import 'package:goalkeeper/screens/group_goals_screen.dart';
 import 'package:goalkeeper/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final List<Widget> _pages = [
     const BucketListScreen(),
-    const FriendsScreen(),
+    const GroupGoalsScreen(),
     const ProfileScreen(),
   ];
 
@@ -94,8 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'My Goals',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.group),
-            label: 'Friends',
+            icon: Icon(Icons.people_alt),
+            label: 'Group Goals',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
