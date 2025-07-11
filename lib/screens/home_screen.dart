@@ -14,16 +14,51 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<Goal> _goals = [];
+
+  final List<Goal> _personalGoals = [];
+  final List<Goal> _groupGoals = [
+    Goal(
+      id: 'g1',
+      title: 'Team Project Completion',
+      description: 'Finish the Flutter project with the team',
+      dueDate: DateTime.now().add(const Duration(days: 14)),
+      createdBy: 'user1',
+      isGroupGoal: true,
+      participants: ['user1', 'user2', 'user3'],
+    ),
+    Goal(
+      id: 'g2',
+      title: 'Group Vacation',
+      description: 'Plan summer trip with friends',
+      dueDate: DateTime.now().add(const Duration(days: 90)),
+      createdBy: 'user4',
+      isGroupGoal: true,
+      participants: ['user1', 'user4'],
+    ),
+  ];
+
+  final Map<String, String> users = const {
+    'user1': 'Alice',
+    'user2': 'Bob',
+    'user3': 'Charlie',
+    'user4': 'Diana',
+    'currentUserId': 'You',
+  };
 
   List<Widget> get _pages => [
         BucketListScreen(
-          goals: _goals,
-          onUpdateGoal: _updateGoal,
-          onDeleteGoal: _deleteGoal,
-          onToggleComplete: _toggleGoalCompletion,
+          goals: _personalGoals,
+          onUpdateGoal: _updatePersonalGoal,
+          onDeleteGoal: _deletePersonalGoal,
+          onToggleComplete: _togglePersonalGoal,
         ),
-        const GroupGoalsScreen(),
+        GroupGoalsScreen(
+          goals: _groupGoals,
+          users: users,
+          onUpdateGoal: _updateGroupGoal,
+          onDeleteGoal: _deleteGroupGoal,
+          onToggleComplete: _toggleGroupGoal,
+        ),
         const ProfileScreen(),
       ];
 
@@ -33,28 +68,50 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _addNewGoal(Goal newGoal) {
+  // Personal Goal Handlers
+  void _addNewPersonalGoal(Goal newGoal) {
     setState(() {
-      _goals.add(newGoal);
+      _personalGoals.add(newGoal);
     });
   }
 
-  void _updateGoal(int index, Goal updatedGoal) {
+  void _updatePersonalGoal(int index, Goal updatedGoal) {
     setState(() {
-      _goals[index] = updatedGoal;
+      _personalGoals[index] = updatedGoal;
     });
   }
 
-  void _deleteGoal(int index) {
+  void _deletePersonalGoal(int index) {
     setState(() {
-      _goals.removeAt(index);
+      _personalGoals.removeAt(index);
     });
   }
 
-  void _toggleGoalCompletion(int index) {
+  void _togglePersonalGoal(int index) {
     setState(() {
-      _goals[index] = _goals[index].copyWith(
-        isCompleted: !_goals[index].isCompleted,
+      _personalGoals[index] = _personalGoals[index].copyWith(
+        isCompleted: !_personalGoals[index].isCompleted,
+      );
+    });
+  }
+
+  // Group Goal Handlers
+  void _updateGroupGoal(int index, Goal updatedGoal) {
+    setState(() {
+      _groupGoals[index] = updatedGoal;
+    });
+  }
+
+  void _deleteGroupGoal(int index) {
+    setState(() {
+      _groupGoals.removeAt(index);
+    });
+  }
+
+  void _toggleGroupGoal(int index) {
+    setState(() {
+      _groupGoals[index] = _groupGoals[index].copyWith(
+        isCompleted: !_groupGoals[index].isCompleted,
       );
     });
   }
@@ -68,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // Implement search functionality
+              // TODO: Implement search
             },
           ),
         ],
@@ -81,12 +138,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => CreateGoalScreen(
-                      currentUserId: 'currentUserId', // Replace with actual user ID
+                      currentUserId: 'currentUserId', // Replace dynamically
                     ),
                   ),
                 );
                 if (newGoal != null) {
-                  _addNewGoal(newGoal);
+                  _addNewPersonalGoal(newGoal);
                 }
               },
               child: const Icon(Icons.add),
@@ -98,9 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Goals'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt),
-            label: 'Group Goals',
-          ),
+              icon: Icon(Icons.people_alt), label: 'Group Goals'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
