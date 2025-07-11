@@ -50,7 +50,6 @@ class GoalDetailScreen extends StatelessWidget {
               }
             },
           ),
-
           if (onDelete != null)
             IconButton(
               icon: const Icon(Icons.delete),
@@ -97,9 +96,10 @@ class GoalDetailScreen extends StatelessWidget {
             // Description
             Text(
               'Description',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(goal.description),
@@ -114,8 +114,13 @@ class GoalDetailScreen extends StatelessWidget {
                   icon: Icons.calendar_today,
                   label: 'Due Date',
                   value: goal.dueDate != null
-                      ? '${goal.dueDate!.toString().split(' ')[0]}'
+                      ? goal.dueDate!.toString().split(' ')[0]
                       : 'No due date',
+                ),
+                _buildDetailItem(
+                  icon: Icons.access_time,
+                  label: 'Created Time',
+                  value: _formatDateTime(goal.createdAt),
                 ),
                 _buildDetailItem(
                   icon: Icons.person,
@@ -190,15 +195,13 @@ class GoalDetailScreen extends StatelessWidget {
         content: const Text('Are you sure you want to delete this goal?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), // Just close dialog
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // close dialog
-              Navigator.pop(context, {
-                'action': 'delete',
-              }); // THEN pop detail screen with result
+              Navigator.pop(context);
+              Navigator.pop(context, {'action': 'delete'});
             },
             child: const Text('Delete'),
           ),
@@ -238,4 +241,11 @@ class GoalDetailScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} '
+           '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
+  }
+
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
 }
