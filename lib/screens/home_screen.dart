@@ -46,21 +46,21 @@ class _HomeScreenState extends State<HomeScreen> {
   };
 
   List<Widget> get _pages => [
-        BucketListScreen(
-          goals: _personalGoals,
-          onUpdateGoal: _updatePersonalGoal,
-          onDeleteGoal: _deletePersonalGoal,
-          onToggleComplete: _togglePersonalGoal,
-        ),
-        GroupGoalsScreen(
-          goals: _groupGoals,
-          users: users,
-          onUpdateGoal: _updateGroupGoal,
-          onDeleteGoal: _deleteGroupGoal,
-          onToggleComplete: _toggleGroupGoal,
-        ),
-        const ProfileScreen(),
-      ];
+    BucketListScreen(
+      goals: _personalGoals,
+      onUpdateGoal: _updatePersonalGoal,
+      onDeleteGoal: _deletePersonalGoal,
+      onToggleComplete: _togglePersonalGoal,
+    ),
+    GroupGoalsScreen(
+      goals: _groupGoals,
+      users: users,
+      onUpdateGoal: _updateGroupGoal,
+      onDeleteGoal: _deleteGroupGoal,
+      onToggleComplete: _toggleGroupGoal,
+    ),
+    const ProfileScreen(),
+  ];
 
   void _onTabTapped(int index) {
     setState(() {
@@ -131,19 +131,27 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _pages[_currentIndex],
-      floatingActionButton: _currentIndex == 0
+      floatingActionButton: (_currentIndex == 0 || _currentIndex == 1)
           ? FloatingActionButton(
               onPressed: () async {
                 final newGoal = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => CreateGoalScreen(
-                      currentUserId: 'currentUserId', // Replace dynamically
+                      currentUserId: 'currentUserId',
+                      isGroupGoal: _currentIndex == 1, // true for group tab
                     ),
                   ),
                 );
-                if (newGoal != null) {
-                  _addNewPersonalGoal(newGoal);
+
+                if (newGoal != null && newGoal is Goal) {
+                  if (_currentIndex == 0) {
+                    _addNewPersonalGoal(newGoal);
+                  } else if (_currentIndex == 1) {
+                    setState(() {
+                      _groupGoals.add(newGoal);
+                    });
+                  }
                 }
               },
               child: const Icon(Icons.add),
@@ -155,7 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Goals'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.people_alt), label: 'Group Goals'),
+            icon: Icon(Icons.people_alt),
+            label: 'Group Goals',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

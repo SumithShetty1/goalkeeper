@@ -33,8 +33,8 @@ class GoalDetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
-              final updatedGoal = await Navigator.push(
-                context,
+              final navigator = Navigator.of(context);
+              final updatedGoal = await navigator.push(
                 MaterialPageRoute(
                   builder: (context) => CreateGoalScreen(
                     currentUserId: goal.createdBy,
@@ -43,7 +43,10 @@ class GoalDetailScreen extends StatelessWidget {
                 ),
               );
               if (updatedGoal != null) {
-                Navigator.pop(context, {
+                if (onUpdate != null) {
+                  onUpdate!(updatedGoal);
+                }
+                navigator.pop({
                   'action': 'update',
                   'goal': updatedGoal,
                 });

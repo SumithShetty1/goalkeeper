@@ -4,11 +4,13 @@ import 'package:goalkeeper/models/goal.dart';
 class CreateGoalScreen extends StatefulWidget {
   final String currentUserId;
   final Goal? existingGoal; // Add this parameter for editing
+  final bool? isGroupGoal;
 
   const CreateGoalScreen({
     super.key,
     required this.currentUserId,
     this.existingGoal, // Make it optional for creation
+    this.isGroupGoal,
   });
 
   @override
@@ -44,6 +46,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       _selectedParticipants = widget.existingGoal!.participants
           .where((id) => id != widget.currentUserId)
           .toList();
+    } else if (widget.isGroupGoal != null) {
+      _isGroupGoal = widget.isGroupGoal!;
     }
   }
 
@@ -82,9 +86,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingGoal == null 
-            ? 'Add New Goal' 
-            : 'Edit Goal'),
+        title: Text(widget.existingGoal == null ? 'Add New Goal' : 'Edit Goal'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -176,7 +178,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     final goal = Goal(
-                      id: widget.existingGoal?.id ?? 
+                      id:
+                          widget.existingGoal?.id ??
                           DateTime.now().millisecondsSinceEpoch.toString(),
                       title: _titleController.text,
                       description: _descriptionController.text,
@@ -189,7 +192,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       // Preserve completion status when editing
                       isCompleted: widget.existingGoal?.isCompleted ?? false,
                       // Preserve original creation date when editing
-                      createdAt: widget.existingGoal?.createdAt ?? DateTime.now(),
+                      createdAt:
+                          widget.existingGoal?.createdAt ?? DateTime.now(),
                     );
                     Navigator.pop(context, goal);
                   }
