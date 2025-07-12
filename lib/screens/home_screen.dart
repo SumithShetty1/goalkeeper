@@ -4,7 +4,6 @@ import 'package:goalkeeper/screens/bucket_list_screen.dart';
 import 'package:goalkeeper/screens/create_goal_screen.dart';
 import 'package:goalkeeper/screens/group_goals_screen.dart';
 import 'package:goalkeeper/screens/profile_screen.dart';
-import 'package:goalkeeper/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {

@@ -1,7 +1,8 @@
-import 'package:goalkeeper/screens/home_screen.dart';
-import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:goalkeeper/screens/home_screen.dart';
+import 'package:goalkeeper/screens/login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -21,6 +22,34 @@ class _SignUpScreenState extends State<SignUpScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    nameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> createAccount() async {
     final name = nameController.text.trim();
@@ -42,8 +71,17 @@ class _SignUpScreenState extends State<SignUpScreen>
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Set display name
       await userCredential.user?.updateDisplayName(name);
+
+      final profileImage = "https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=random";
+
+      await FirebaseFirestore.instance.collection('users').doc(email).set({
+        'id': email,
+        'name': name,
+        'profileImage': profileImage,
+        'joinedDate': DateTime.now().toIso8601String(),
+        'friends': [],
+      });
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -62,35 +100,6 @@ class _SignUpScreenState extends State<SignUpScreen>
         });
       }
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    nameController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -130,7 +139,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Icon
                         Container(
                           width: 80,
                           height: 80,
@@ -154,7 +162,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                           ),
                         ),
                         const SizedBox(height: 24),
-
                         const Text(
                           'Create Account',
                           style: TextStyle(
@@ -172,8 +179,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                           ),
                         ),
                         const SizedBox(height: 32),
-
-                        // Input fields
                         _buildTextField(
                           controller: nameController,
                           label: 'Full Name',
@@ -181,7 +186,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                           icon: Icons.person_outline,
                         ),
                         const SizedBox(height: 20),
-
                         _buildTextField(
                           controller: emailController,
                           label: 'Email',
@@ -190,7 +194,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                           keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 20),
-
                         _buildTextField(
                           controller: passwordController,
                           label: 'Password',
@@ -205,8 +208,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                           },
                         ),
                         const SizedBox(height: 32),
-
-                        // Sign up button
                         _isLoading
                             ? const CircularProgressIndicator()
                             : SizedBox(
@@ -244,8 +245,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 ),
                               ),
                         const SizedBox(height: 24),
-
-                        // Already have an account?
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

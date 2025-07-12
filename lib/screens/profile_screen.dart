@@ -1,43 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        const UserProfileHeader(),
-        const FriendsSection(),
-        const SettingsSection(),
-      ],
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const Center(child: Text("User not logged in"));
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(user.email).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text('User data not found.'));
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        return ListView(
+          children: [
+            UserProfileHeader(userData: userData),
+            FriendsSection(friendIds: List<String>.from(userData['friends'] ?? [])),
+            const SettingsSection(),
+          ],
+        );
+      },
     );
   }
 }
 
 class UserProfileHeader extends StatelessWidget {
-  const UserProfileHeader({super.key});
+  final Map<String, dynamic> userData;
+
+  const UserProfileHeader({super.key, required this.userData});
 
   @override
   Widget build(BuildContext context) {
+    final joinDate = DateTime.tryParse(userData['joinedDate'] ?? '') ?? DateTime.now();
+    final years = DateTime.now().difference(joinDate).inDays ~/ 365;
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 50,
-            backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+            backgroundImage: NetworkImage(userData['profileImage'] ?? ''),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'John Doe',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Text(
+            userData['name'] ?? 'Unknown',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Member since ${DateTime.now().year - 2022} years',
+            'Member since ${years > 0 ? '$years year${years > 1 ? 's' : ''}' : 'this year'}',
             style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 16),
@@ -46,7 +68,7 @@ class UserProfileHeader extends StatelessWidget {
             children: [
               _buildStatItem('Goals', '24'),
               _buildStatItem('Completed', '18'),
-              _buildStatItem('Friends', '56'),
+              _buildStatItem('Friends', (userData['friends']?.length ?? 0).toString()),
             ],
           ),
         ],
@@ -68,7 +90,23 @@ class UserProfileHeader extends StatelessWidget {
 }
 
 class FriendsSection extends StatelessWidget {
-  const FriendsSection({super.key});
+  final List<String> friendIds;
+
+  const FriendsSection({super.key, required this.friendIds});
+
+  Future<List<Map<String, dynamic>>> _fetchFriendData() async {
+    if (friendIds.isEmpty) return [];
+
+    final firestore = FirebaseFirestore.instance;
+    final friendDocs = await Future.wait(friendIds.map(
+      (id) => firestore.collection('users').doc(id).get(),
+    ));
+
+    return friendDocs
+        .where((doc) => doc.exists)
+        .map((doc) => doc.data()! as Map<String, dynamic>)
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,29 +120,39 @@ class FriendsSection extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 10, // Example count
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Column(
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundImage: NetworkImage(
-                          'https://via.placeholder.com/60',
-                        ),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _fetchFriendData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final friends = snapshot.data ?? [];
+              return SizedBox(
+                height: 100,
+                child: friends.isEmpty
+                    ? const Center(child: Text("No friends yet"))
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: friends.length,
+                        itemBuilder: (context, index) {
+                          final friend = friends[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundImage: NetworkImage(friend['profileImage'] ?? ''),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(friend['name'] ?? 'Friend'),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 4),
-                      Text('Friend ${index + 1}'),
-                    ],
-                  ),
-                );
-              },
-            ),
+              );
+            },
           ),
           TextButton(
             onPressed: () {
@@ -124,9 +172,7 @@ class SettingsSection extends StatelessWidget {
   void _signOut(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
-
       if (!context.mounted) return;
-
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -134,10 +180,9 @@ class SettingsSection extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to sign out')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to sign out')),
+      );
     }
   }
 
