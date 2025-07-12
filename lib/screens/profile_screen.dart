@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:goalkeeper/screens/all_friends_screen.dart';
 import 'package:goalkeeper/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:goalkeeper/screens/friend_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -11,8 +13,11 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Center(child: Text("User not logged in"));
 
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(user.email).get(),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.email)
+          .snapshots(),
       builder: (context, userSnapshot) {
         if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -35,9 +40,13 @@ class ProfileScreen extends StatelessWidget {
 
             final goals = goalsSnapshot.data?.docs ?? [];
             final totalGoals = goals.length;
-            final completedGoals = goals.where(
-              (doc) => (doc.data() as Map<String, dynamic>)['isCompleted'] == true,
-            ).length;
+            final completedGoals = goals
+                .where(
+                  (doc) =>
+                      (doc.data() as Map<String, dynamic>)['isCompleted'] ==
+                      true,
+                )
+                .length;
 
             return ListView(
               children: [
@@ -73,7 +82,8 @@ class UserProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final joinDate = DateTime.tryParse(userData['joinedDate'] ?? '') ?? DateTime.now();
+    final joinDate =
+        DateTime.tryParse(userData['joinedDate'] ?? '') ?? DateTime.now();
     final years = DateTime.now().difference(joinDate).inDays ~/ 365;
 
     return Container(
@@ -100,7 +110,10 @@ class UserProfileHeader extends StatelessWidget {
             children: [
               _buildStatItem('Goals', totalGoals.toString()),
               _buildStatItem('Completed', completedGoals.toString()),
-              _buildStatItem('Friends', (userData['friends']?.length ?? 0).toString()),
+              _buildStatItem(
+                'Friends',
+                (userData['friends']?.length ?? 0).toString(),
+              ),
             ],
           ),
         ],
@@ -121,23 +134,108 @@ class UserProfileHeader extends StatelessWidget {
   }
 }
 
-class FriendsSection extends StatelessWidget {
+class FriendsSection extends StatefulWidget {
   final List<String> friendIds;
 
   const FriendsSection({super.key, required this.friendIds});
 
+  @override
+  State<FriendsSection> createState() => _FriendsSectionState();
+}
+
+class _FriendsSectionState extends State<FriendsSection> {
+  late Future<List<Map<String, dynamic>>> _friendFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _friendFuture = _fetchFriendData();
+  }
+
   Future<List<Map<String, dynamic>>> _fetchFriendData() async {
-    if (friendIds.isEmpty) return [];
+    if (widget.friendIds.isEmpty) return [];
 
     final firestore = FirebaseFirestore.instance;
-    final friendDocs = await Future.wait(friendIds.map(
-      (id) => firestore.collection('users').doc(id).get(),
-    ));
+    final friendDocs = await Future.wait(
+      widget.friendIds.map((id) => firestore.collection('users').doc(id).get()),
+    );
 
     return friendDocs
         .where((doc) => doc.exists)
         .map((doc) => doc.data()! as Map<String, dynamic>)
         .toList();
+  }
+
+  void _refreshFriends() {
+    setState(() {
+      _friendFuture = _fetchFriendData();
+    });
+  }
+
+  void _showAddFriendDialog(BuildContext context) {
+    final _emailController = TextEditingController();
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Friend'),
+        content: TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: 'Enter friend\'s email'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final enteredEmail = _emailController.text.trim();
+              if (enteredEmail.isEmpty || enteredEmail == currentUser?.email) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Enter a valid email')),
+                );
+                return;
+              }
+
+              final userDoc = FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser!.email);
+              final friendDoc = FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(enteredEmail);
+
+              final friendSnap = await friendDoc.get();
+              if (!friendSnap.exists) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('User not found')));
+                return;
+              }
+
+              await userDoc.update({
+                'friends': FieldValue.arrayUnion([enteredEmail]),
+              });
+
+              await friendDoc.update({
+                'friends': FieldValue.arrayUnion([currentUser.email]),
+              });
+
+              Navigator.pop(context);
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Friend added!')));
+
+              // ✅ Refresh friends list
+              _refreshFriends();
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -147,13 +245,23 @@ class FriendsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Friends',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const Text(
+                'Friends',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.person_add),
+                tooltip: 'Add Friend',
+                onPressed: () => _showAddFriendDialog(context),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: _fetchFriendData(),
+            future: _friendFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -168,17 +276,33 @@ class FriendsSection extends StatelessWidget {
                         itemCount: friends.length,
                         itemBuilder: (context, index) {
                           final friend = friends[index];
+                          final friendEmail = widget.friendIds[index];
+
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),
-                            child: Column(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage: NetworkImage(friend['profileImage'] ?? ''),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(friend['name'] ?? 'Friend'),
-                              ],
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FriendProfileScreen(
+                                      friendEmail: friendEmail,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Column(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundImage: NetworkImage(
+                                      friend['profileImage'] ?? '',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(friend['name'] ?? 'Friend'),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -188,7 +312,10 @@ class FriendsSection extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // Navigate to full friends list
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AllFriendsScreen()),
+              );
             },
             child: const Text('View All Friends'),
           ),
@@ -212,9 +339,9 @@ class SettingsSection extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to sign out')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to sign out')));
     }
   }
 
@@ -233,11 +360,6 @@ class SettingsSection extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Account Settings'),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications),
-            title: const Text('Notifications'),
             onTap: () {},
           ),
           ListTile(
