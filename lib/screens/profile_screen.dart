@@ -13,21 +13,46 @@ class ProfileScreen extends StatelessWidget {
 
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(user.email).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (!snapshot.hasData || !snapshot.data!.exists) {
+        if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
           return const Center(child: Text('User data not found.'));
         }
 
-        final userData = snapshot.data!.data() as Map<String, dynamic>;
-        return ListView(
-          children: [
-            UserProfileHeader(userData: userData),
-            FriendsSection(friendIds: List<String>.from(userData['friends'] ?? [])),
-            const SettingsSection(),
-          ],
+        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('goals')
+              .where('participants', arrayContains: user.email)
+              .snapshots(),
+          builder: (context, goalsSnapshot) {
+            if (goalsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final goals = goalsSnapshot.data?.docs ?? [];
+            final totalGoals = goals.length;
+            final completedGoals = goals.where(
+              (doc) => (doc.data() as Map<String, dynamic>)['isCompleted'] == true,
+            ).length;
+
+            return ListView(
+              children: [
+                UserProfileHeader(
+                  userData: userData,
+                  totalGoals: totalGoals,
+                  completedGoals: completedGoals,
+                ),
+                FriendsSection(
+                  friendIds: List<String>.from(userData['friends'] ?? []),
+                ),
+                const SettingsSection(),
+              ],
+            );
+          },
         );
       },
     );
@@ -36,8 +61,15 @@ class ProfileScreen extends StatelessWidget {
 
 class UserProfileHeader extends StatelessWidget {
   final Map<String, dynamic> userData;
+  final int totalGoals;
+  final int completedGoals;
 
-  const UserProfileHeader({super.key, required this.userData});
+  const UserProfileHeader({
+    super.key,
+    required this.userData,
+    required this.totalGoals,
+    required this.completedGoals,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +98,8 @@ class UserProfileHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatItem('Goals', '24'),
-              _buildStatItem('Completed', '18'),
+              _buildStatItem('Goals', totalGoals.toString()),
+              _buildStatItem('Completed', completedGoals.toString()),
               _buildStatItem('Friends', (userData['friends']?.length ?? 0).toString()),
             ],
           ),
