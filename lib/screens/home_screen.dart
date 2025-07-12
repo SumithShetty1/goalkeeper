@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:goalkeeper/models/goal.dart';
 import 'package:goalkeeper/screens/bucket_list_screen.dart';
 import 'package:goalkeeper/screens/create_goal_screen.dart';
 import 'package:goalkeeper/screens/group_goals_screen.dart';
 import 'package:goalkeeper/screens/profile_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:goalkeeper/services/firestore_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,57 +16,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<Goal> _personalGoals = [];
-
-  final List<Goal> _groupGoals = [
-    Goal(
-      id: 'g1',
-      title: 'Team Project Completion',
-      description: 'Finish the Flutter project with the team',
-      dueDate: DateTime.now().add(const Duration(days: 14)),
-      createdBy: 'user1',
-      isGroupGoal: true,
-      participants: ['user1', 'user2', 'user3'],
-    ),
-    Goal(
-      id: 'g2',
-      title: 'Group Vacation',
-      description: 'Plan summer trip with friends',
-      dueDate: DateTime.now().add(const Duration(days: 90)),
-      createdBy: 'user4',
-      isGroupGoal: true,
-      participants: ['user1', 'user4'],
-    ),
-  ];
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService();
 
-  String get currentUserId => _auth.currentUser?.uid ?? '';
-
-  Map<String, String> get users => {
-        'user1': 'Alice',
-        'user2': 'Bob',
-        'user3': 'Charlie',
-        'user4': 'Diana',
-        currentUserId: 'You',
-      };
-
-  List<Widget> get _pages => [
-        BucketListScreen(
-          goals: _personalGoals,
-          onUpdateGoal: _updatePersonalGoal,
-          onDeleteGoal: _deletePersonalGoal,
-          onToggleComplete: _togglePersonalGoal,
-        ),
-        GroupGoalsScreen(
-          goals: _groupGoals,
-          users: users,
-          onUpdateGoal: _updateGroupGoal,
-          onDeleteGoal: _deleteGroupGoal,
-          onToggleComplete: _toggleGroupGoal,
-        ),
-        const ProfileScreen(),
-      ];
+  String get currentUserEmail => _auth.currentUser?.email ?? '';
+  String get currentUserName => _auth.currentUser?.displayName ?? 'You';
 
   void _onTabTapped(int index) {
     setState(() {
@@ -73,52 +28,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Personal Goal Handlers
-  void _addNewPersonalGoal(Goal newGoal) {
-    setState(() {
-      _personalGoals.add(newGoal);
-    });
+  Future<void> _addNewGoal(Goal goal) async {
+    await _firestoreService.addGoal(goal);
   }
 
-  void _updatePersonalGoal(int index, Goal updatedGoal) {
-    setState(() {
-      _personalGoals[index] = updatedGoal;
-    });
+  Future<void> _updateGoal(Goal goal) async {
+    await _firestoreService.updateGoal(goal);
   }
 
-  void _deletePersonalGoal(int index) {
-    setState(() {
-      _personalGoals.removeAt(index);
-    });
+  Future<void> _deleteGoal(String goalId) async {
+    await _firestoreService.deleteGoal(goalId);
   }
 
-  void _togglePersonalGoal(int index) {
-    setState(() {
-      _personalGoals[index] = _personalGoals[index].copyWith(
-        isCompleted: !_personalGoals[index].isCompleted,
-      );
-    });
-  }
-
-  // Group Goal Handlers
-  void _updateGroupGoal(int index, Goal updatedGoal) {
-    setState(() {
-      _groupGoals[index] = updatedGoal;
-    });
-  }
-
-  void _deleteGroupGoal(int index) {
-    setState(() {
-      _groupGoals.removeAt(index);
-    });
-  }
-
-  void _toggleGroupGoal(int index) {
-    setState(() {
-      _groupGoals[index] = _groupGoals[index].copyWith(
-        isCompleted: !_groupGoals[index].isCompleted,
-      );
-    });
+  Future<void> _toggleGoalComplete(Goal goal) async {
+    await _firestoreService.toggleGoalCompletion(goal.id, goal.isCompleted);
   }
 
   @override
@@ -130,12 +53,62 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search
+              // TODO: implement search
             },
           ),
         ],
       ),
-      body: _pages[_currentIndex],
+      body: _currentIndex == 2
+          ? const ProfileScreen() // No goal loading needed here
+          : StreamBuilder<List<Goal>>(
+              stream: _firestoreService.getGoalsForUser(currentUserEmail),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No goals yet'));
+                }
+
+                final allGoals = snapshot.data!;
+                final personalGoals = allGoals
+                    .where((g) => !g.isGroupGoal)
+                    .toList();
+                final groupGoals = allGoals
+                    .where((g) => g.isGroupGoal)
+                    .toList();
+
+                final users = {
+                  for (final g in groupGoals)
+                    for (final p in g.participants) p['email']!: p['name']!,
+                  for (final g in groupGoals)
+                    g.createdBy['email']!: g.createdBy['name']!,
+                  currentUserEmail: currentUserName,
+                };
+
+                return _currentIndex == 0
+                    ? BucketListScreen(
+                        goals: personalGoals,
+                        onUpdateGoal: (index, updatedGoal) =>
+                            _updateGoal(updatedGoal),
+                        onDeleteGoal: (index) =>
+                            _deleteGoal(personalGoals[index].id),
+                        onToggleComplete: (index) =>
+                            _toggleGoalComplete(personalGoals[index]),
+                      )
+                    : GroupGoalsScreen(
+                        goals: groupGoals,
+                        users: users,
+                        onUpdateGoal: (index, updatedGoal) =>
+                            _updateGoal(updatedGoal),
+                        onDeleteGoal: (index) =>
+                            _deleteGoal(groupGoals[index].id),
+                        onToggleComplete: (index) =>
+                            _toggleGoalComplete(groupGoals[index]),
+                      );
+              },
+            ),
       floatingActionButton: (_currentIndex == 0 || _currentIndex == 1)
           ? FloatingActionButton(
               onPressed: () async {
@@ -143,20 +116,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => CreateGoalScreen(
-                      currentUserId: currentUserId,
+                      currentUserId: currentUserEmail,
+                      currentUserName: currentUserName,
                       isGroupGoal: _currentIndex == 1,
                     ),
                   ),
                 );
 
                 if (newGoal != null && newGoal is Goal) {
-                  if (_currentIndex == 0) {
-                    _addNewPersonalGoal(newGoal);
-                  } else if (_currentIndex == 1) {
-                    setState(() {
-                      _groupGoals.add(newGoal);
-                    });
-                  }
+                  _addNewGoal(newGoal);
                 }
               },
               child: const Icon(Icons.add),

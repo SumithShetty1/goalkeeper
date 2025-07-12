@@ -5,9 +5,9 @@ class Goal {
   final bool isCompleted;
   final DateTime? dueDate;
   final DateTime createdAt;
-  final String createdBy; // User ID of creator
+  final Map<String, String> createdBy; // {name: String, email: String}
   final bool isGroupGoal;
-  final List<String> participants; // List of user IDs who have access
+  final List<Map<String, String>> participants; // Array of {name, email} maps
 
   Goal({
     required this.id,
@@ -28,9 +28,9 @@ class Goal {
     bool? isCompleted,
     DateTime? dueDate,
     DateTime? createdAt,
-    String? createdBy,
+    Map<String, String>? createdBy,
     bool? isGroupGoal,
-    List<String>? participants,
+    List<Map<String, String>>? participants,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -67,9 +67,11 @@ class Goal {
       isCompleted: map['isCompleted'],
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
       createdAt: DateTime.parse(map['createdAt']),
-      createdBy: map['createdBy'],
+      createdBy: Map<String, String>.from(map['createdBy']),
       isGroupGoal: map['isGroupGoal'],
-      participants: List<String>.from(map['participants']),
+      participants: List<Map<String, String>>.from(
+        map['participants'].map((p) => Map<String, String>.from(p)),
+      ),
     );
   }
 }

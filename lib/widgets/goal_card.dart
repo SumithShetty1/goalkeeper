@@ -56,9 +56,7 @@ class GoalCard extends StatelessWidget {
           if (result != null && result is Map) {
             if (result['action'] == 'update' && result['goal'] != null) {
               final updatedGoal = result['goal'] as Goal;
-              onEdit(
-                updatedGoal,
-              ); // ✅ Properly call onEdit with the updated goal
+              onEdit(updatedGoal);
             } else if (result['action'] == 'delete') {
               onDelete();
             }
@@ -111,27 +109,25 @@ class GoalCard extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => CreateGoalScreen(
-                              currentUserId: goal.createdBy,
+                              currentUserId: goal.createdBy['email'] ?? '',
+                              currentUserName: goal.createdBy['name'] ?? '',
                               existingGoal: goal,
                             ),
                           ),
                         );
 
                         if (updatedGoal != null && updatedGoal is Goal) {
-                          onEdit(
-                            updatedGoal,
-                          ); // ✅ Now update parent with edited goal
+                          onEdit(updatedGoal);
                         }
                       }
                       if (value == 'delete') onDelete();
                     },
-
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
                         value: 'edit',
                         child: Text('Edit Goal'),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Text('Delete Goal'),
                       ),
@@ -159,10 +155,10 @@ class GoalCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    'Created by: ${users?[goal.createdBy] ?? 'Unknown'}',
+                    'Created by: ${goal.createdBy['name'] ?? 'Unknown'}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
+                          fontStyle: FontStyle.italic,
+                        ),
                   ),
                 ),
             ],
@@ -183,13 +179,16 @@ class GoalCard extends StatelessWidget {
           Wrap(
             spacing: 4,
             runSpacing: 4,
-            children: goal.participants.map((userId) {
+            children: goal.participants.map((participant) {
+              final email = participant['email'] ?? '';
+              final name = participant['name'] ?? 'Unknown';
+              final isCreator = goal.createdBy['email'] == email;
+
               return Chip(
-                label: Text(users[userId] ?? 'Unknown'),
+                label: Text(name),
                 visualDensity: VisualDensity.compact,
-                backgroundColor: userId == goal.createdBy
-                    ? Colors.blue[100]
-                    : Colors.grey[200],
+                backgroundColor:
+                    isCreator ? Colors.blue[100] : Colors.grey[200],
               );
             }).toList(),
           ),

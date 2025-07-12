@@ -8,14 +8,6 @@ class GoalDetailScreen extends StatelessWidget {
   final Function()? onDelete;
   final Function()? onToggleComplete;
 
-  final Map<String, String> users = const {
-    'user1': 'Alice Johnson',
-    'user2': 'Bob Smith',
-    'user3': 'Charlie Brown',
-    'user4': 'Diana Prince',
-    'currentUserId': 'You',
-  };
-
   const GoalDetailScreen({
     super.key,
     required this.goal,
@@ -26,6 +18,9 @@ class GoalDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final creatorEmail = goal.createdBy['email'] ?? '';
+    final creatorName = goal.createdBy['name'] ?? 'Unknown';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Goal Details'),
@@ -37,7 +32,8 @@ class GoalDetailScreen extends StatelessWidget {
               final updatedGoal = await navigator.push(
                 MaterialPageRoute(
                   builder: (context) => CreateGoalScreen(
-                    currentUserId: goal.createdBy,
+                    currentUserId: creatorEmail,
+                    currentUserName: creatorName,
                     existingGoal: goal,
                   ),
                 ),
@@ -46,10 +42,6 @@ class GoalDetailScreen extends StatelessWidget {
                 if (onUpdate != null) {
                   onUpdate!(updatedGoal);
                 }
-                navigator.pop({
-                  'action': 'update',
-                  'goal': updatedGoal,
-                });
               }
             },
           ),
@@ -79,8 +71,9 @@ class GoalDetailScreen extends StatelessWidget {
                     children: [
                       Text(
                         goal.title,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -99,10 +92,9 @@ class GoalDetailScreen extends StatelessWidget {
             // Description
             Text(
               'Description',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(goal.description),
@@ -122,13 +114,13 @@ class GoalDetailScreen extends StatelessWidget {
                 ),
                 _buildDetailItem(
                   icon: Icons.access_time,
-                  label: 'Created Time',
+                  label: 'Created At',
                   value: _formatDateTime(goal.createdAt),
                 ),
                 _buildDetailItem(
                   icon: Icons.person,
                   label: 'Created By',
-                  value: users[goal.createdBy] ?? 'Unknown',
+                  value: creatorName,
                 ),
                 _buildDetailItem(
                   icon: Icons.check_circle,
@@ -156,13 +148,15 @@ class GoalDetailScreen extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: goal.participants.map((userId) {
+                children: goal.participants.map((participant) {
+                  final name = participant['name'] ?? 'Unknown';
+                  final email = participant['email'] ?? '';
                   return Chip(
                     avatar: CircleAvatar(
-                      child: Text(users[userId]?.substring(0, 1) ?? '?'),
+                      child: Text(name.isNotEmpty ? name[0] : '?'),
                     ),
-                    label: Text(users[userId] ?? 'Unknown'),
-                    backgroundColor: userId == goal.createdBy
+                    label: Text(name),
+                    backgroundColor: email == creatorEmail
                         ? Colors.blue[100]
                         : Colors.grey[200],
                   );
@@ -247,7 +241,7 @@ class GoalDetailScreen extends StatelessWidget {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} '
-           '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
+        '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
   }
 
   String _twoDigits(int n) => n.toString().padLeft(2, '0');

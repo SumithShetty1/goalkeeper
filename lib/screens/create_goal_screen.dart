@@ -1,15 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final String currentUserId;
-  final Goal? existingGoal; // Add this parameter for editing
+  final String currentUserName;
+  final Goal? existingGoal;
   final bool? isGroupGoal;
 
   const CreateGoalScreen({
     super.key,
     required this.currentUserId,
-    this.existingGoal, // Make it optional for creation
+    required this.currentUserName,
+    this.existingGoal,
     this.isGroupGoal,
   });
 
@@ -23,31 +26,70 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   final _descriptionController = TextEditingController();
   DateTime? _dueDate;
   bool _isGroupGoal = false;
-  List<String> _selectedParticipants = [];
+  List<Map<String, String>> _selectedParticipants = [];
 
-  // Mock friends list - replace with your actual data source
-  final Map<String, String> _friends = {
-    'friend1': 'Alice Johnson',
-    'friend2': 'Bob Smith',
-    'friend3': 'Charlie Brown',
-    'friend4': 'Diana Prince',
-  };
+  Map<String, Map<String, String>> _friends = {};
+  bool _isLoadingFriends = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with existing goal data if editing
+
     if (widget.existingGoal != null) {
       _titleController.text = widget.existingGoal!.title;
       _descriptionController.text = widget.existingGoal!.description;
       _dueDate = widget.existingGoal!.dueDate;
       _isGroupGoal = widget.existingGoal!.isGroupGoal;
-      // Filter out current user from participants to show in UI
+
       _selectedParticipants = widget.existingGoal!.participants
-          .where((id) => id != widget.currentUserId)
+          .where((participant) => participant['email'] != widget.currentUserId)
           .toList();
     } else if (widget.isGroupGoal != null) {
       _isGroupGoal = widget.isGroupGoal!;
+    }
+
+    _loadFriends();
+  }
+
+  Future<void> _loadFriends() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.currentUserId)
+          .get();
+
+      final userData = userDoc.data();
+      if (userData == null) return;
+
+      final List<String> friendEmails =
+          List<String>.from(userData['friends'] ?? []);
+
+      Map<String, Map<String, String>> loadedFriends = {};
+
+      for (String email in friendEmails) {
+        final friendDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(email)
+            .get();
+
+        if (friendDoc.exists) {
+          final friendData = friendDoc.data()!;
+          loadedFriends[email] = {
+            'email': email,
+            'name': friendData['name'] ?? 'Unknown',
+          };
+        }
+      }
+
+      setState(() {
+        _friends = loadedFriends;
+        _isLoadingFriends = false;
+      });
+    } catch (e) {
+      print('Error loading friends: $e');
+      setState(() {
+        _isLoadingFriends = false;
+      });
     }
   }
 
@@ -72,12 +114,15 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     }
   }
 
-  void _toggleParticipant(String friendId) {
+  void _toggleParticipant(String friendEmail) {
     setState(() {
-      if (_selectedParticipants.contains(friendId)) {
-        _selectedParticipants.remove(friendId);
+      final friend = _friends[friendEmail];
+      if (friend == null) return;
+
+      if (_selectedParticipants.any((p) => p['email'] == friendEmail)) {
+        _selectedParticipants.removeWhere((p) => p['email'] == friendEmail);
       } else {
-        _selectedParticipants.add(friendId);
+        _selectedParticipants.add(friend);
       }
     });
   }
@@ -155,22 +200,34 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  children: _friends.entries.map((entry) {
-                    return FilterChip(
-                      label: Text(entry.value),
-                      selected: _selectedParticipants.contains(entry.key),
-                      onSelected: (_) => _toggleParticipant(entry.key),
-                      avatar: CircleAvatar(
-                        child: Text(entry.value.substring(0, 1)),
-                      ),
-                      backgroundColor: Colors.grey[200],
-                      selectedColor: Colors.blue[100],
-                    );
-                  }).toList(),
-                ),
+                _isLoadingFriends
+                    ? const Center(child: CircularProgressIndicator())
+                    : _friends.isEmpty
+                        ? const Text('No friends found')
+                        : Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: _friends.entries.map((entry) {
+                              return FilterChip(
+                                label: Text(entry.value['name'] ?? ''),
+                                selected: _selectedParticipants.any(
+                                  (p) => p['email'] == entry.key,
+                                ),
+                                onSelected: (_) =>
+                                    _toggleParticipant(entry.key),
+                                avatar: CircleAvatar(
+                                  child: Text(
+                                    entry.value['name']
+                                            ?.substring(0, 1)
+                                            .toUpperCase() ??
+                                        '?',
+                                  ),
+                                ),
+                                backgroundColor: Colors.grey[200],
+                                selectedColor: Colors.blue[100],
+                              );
+                            }).toList(),
+                          ),
                 const SizedBox(height: 16),
               ],
               const SizedBox(height: 24),
@@ -178,20 +235,24 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     final goal = Goal(
-                      id:
-                          widget.existingGoal?.id ??
+                      id: widget.existingGoal?.id ??
                           DateTime.now().millisecondsSinceEpoch.toString(),
                       title: _titleController.text,
                       description: _descriptionController.text,
                       dueDate: _dueDate,
-                      createdBy: widget.currentUserId,
+                      createdBy: {
+                        'email': widget.currentUserId,
+                        'name': widget.currentUserName,
+                      },
                       isGroupGoal: _isGroupGoal,
-                      participants: _isGroupGoal
-                          ? [..._selectedParticipants, widget.currentUserId]
-                          : [],
-                      // Preserve completion status when editing
+                      participants: [
+                        ..._selectedParticipants,
+                        {
+                          'email': widget.currentUserId,
+                          'name': widget.currentUserName,
+                        },
+                      ],
                       isCompleted: widget.existingGoal?.isCompleted ?? false,
-                      // Preserve original creation date when editing
                       createdAt:
                           widget.existingGoal?.createdAt ?? DateTime.now(),
                     );
