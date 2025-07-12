@@ -18,13 +18,39 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isSearching = false;
 
   String get currentUserEmail => _auth.currentUser?.email ?? '';
   String get currentUserName => _auth.currentUser?.displayName ?? 'You';
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
+      _searchQuery = '';
+      _searchController.clear();
+      _isSearching = false;
+    });
+  }
+
+  void _startSearch() {
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  void _stopSearch() {
+    setState(() {
+      _searchQuery = '';
+      _searchController.clear();
+      _isSearching = false;
     });
   }
 
@@ -48,18 +74,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GoalKeeper'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: implement search
-            },
-          ),
-        ],
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search goals...',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.black, fontSize: 18),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              )
+            : const Text('GoalKeeper'),
+        actions: _currentIndex == 2
+            ? []
+            : [
+                _isSearching
+                    ? IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: _stopSearch,
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: _startSearch,
+                      )
+              ],
       ),
       body: _currentIndex == 2
-          ? const ProfileScreen() // No goal loading needed here
+          ? const ProfileScreen()
           : StreamBuilder<List<Goal>>(
               stream: _firestoreService.getGoalsForUser(currentUserEmail),
               builder: (context, snapshot) {
@@ -72,12 +118,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 final allGoals = snapshot.data!;
-                final personalGoals = allGoals
-                    .where((g) => !g.isGroupGoal)
-                    .toList();
-                final groupGoals = allGoals
-                    .where((g) => g.isGroupGoal)
-                    .toList();
+
+                final filteredGoals = allGoals.where((goal) {
+                  final query = _searchQuery.trim();
+                  if (query.isEmpty) return true;
+                  final title = goal.title.toLowerCase();
+                  final description = goal.description.toLowerCase();
+                  return title.contains(query) || description.contains(query);
+                }).toList();
+
+                final personalGoals =
+                    filteredGoals.where((g) => !g.isGroupGoal).toList();
+                final groupGoals =
+                    filteredGoals.where((g) => g.isGroupGoal).toList();
 
                 final users = {
                   for (final g in groupGoals)
