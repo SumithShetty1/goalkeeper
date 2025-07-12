@@ -1,11 +1,11 @@
-class UserProfile {
+class User {
   final String id;
   final String name;
   final String profileImage;
   final DateTime joinedDate;
   final List<String> friends;
 
-  UserProfile({
+  User({
     required this.id,
     required this.name,
     required this.profileImage,
@@ -13,8 +13,8 @@ class UserProfile {
     required this.friends,
   });
 
-  factory UserProfile.fromMap(Map<String, dynamic> map) {
-    return UserProfile(
+  factory User.fromMap(Map<String, dynamic> map) {
+    return User(
       id: map['id'],
       name: map['name'],
       profileImage: map['profileImage'] ?? 'https://via.placeholder.com/150',

@@ -4,6 +4,8 @@ import 'package:goalkeeper/screens/bucket_list_screen.dart';
 import 'package:goalkeeper/screens/create_goal_screen.dart';
 import 'package:goalkeeper/screens/group_goals_screen.dart';
 import 'package:goalkeeper/screens/profile_screen.dart';
+import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,8 +16,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-
   final List<Goal> _personalGoals = [];
+
   final List<Goal> _groupGoals = [
     Goal(
       id: 'g1',
@@ -37,30 +39,34 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  final Map<String, String> users = const {
-    'user1': 'Alice',
-    'user2': 'Bob',
-    'user3': 'Charlie',
-    'user4': 'Diana',
-    'currentUserId': 'You',
-  };
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String get currentUserId => _auth.currentUser?.uid ?? '';
+
+  Map<String, String> get users => {
+        'user1': 'Alice',
+        'user2': 'Bob',
+        'user3': 'Charlie',
+        'user4': 'Diana',
+        currentUserId: 'You',
+      };
 
   List<Widget> get _pages => [
-    BucketListScreen(
-      goals: _personalGoals,
-      onUpdateGoal: _updatePersonalGoal,
-      onDeleteGoal: _deletePersonalGoal,
-      onToggleComplete: _togglePersonalGoal,
-    ),
-    GroupGoalsScreen(
-      goals: _groupGoals,
-      users: users,
-      onUpdateGoal: _updateGroupGoal,
-      onDeleteGoal: _deleteGroupGoal,
-      onToggleComplete: _toggleGroupGoal,
-    ),
-    const ProfileScreen(),
-  ];
+        BucketListScreen(
+          goals: _personalGoals,
+          onUpdateGoal: _updatePersonalGoal,
+          onDeleteGoal: _deletePersonalGoal,
+          onToggleComplete: _togglePersonalGoal,
+        ),
+        GroupGoalsScreen(
+          goals: _groupGoals,
+          users: users,
+          onUpdateGoal: _updateGroupGoal,
+          onDeleteGoal: _deleteGroupGoal,
+          onToggleComplete: _toggleGroupGoal,
+        ),
+        const ProfileScreen(),
+      ];
 
   void _onTabTapped(int index) {
     setState(() {
@@ -138,8 +144,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => CreateGoalScreen(
-                      currentUserId: 'currentUserId',
-                      isGroupGoal: _currentIndex == 1, // true for group tab
+                      currentUserId: currentUserId,
+                      isGroupGoal: _currentIndex == 1,
                     ),
                   ),
                 );

@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:goalkeeper/screens/home_screen.dart';
+import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,13 +14,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Navigate to home screen after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
+      final user = FirebaseAuth.instance.currentUser;
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (_) => user == null ? const LoginScreen() : const HomeScreen(),
+        ),
       );
     });
   }
@@ -28,16 +31,10 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo with proper sizing
-            Image.asset(
-              'assets/goalkeeper-logo.png',
-              width: 150, 
-              height: 150, 
-            ),
-          ],
+        child: Image.asset(
+          'assets/goalkeeper-logo.png',
+          width: 150,
+          height: 150,
         ),
       ),
     );

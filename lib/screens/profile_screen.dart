@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -59,10 +61,7 @@ class UserProfileHeader extends StatelessWidget {
           value,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
@@ -95,7 +94,9 @@ class FriendsSection extends StatelessWidget {
                     children: [
                       const CircleAvatar(
                         radius: 30,
-                        backgroundImage: NetworkImage('https://via.placeholder.com/60'),
+                        backgroundImage: NetworkImage(
+                          'https://via.placeholder.com/60',
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text('Friend ${index + 1}'),
@@ -119,6 +120,26 @@ class FriendsSection extends StatelessWidget {
 
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key});
+
+  void _signOut(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!context.mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to sign out')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +171,7 @@ class SettingsSection extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Log Out'),
-            onTap: () {},
+            onTap: () => _signOut(context),
           ),
         ],
       ),
