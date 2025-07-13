@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:goalkeeper/screens/account_settings_screen.dart';
-import 'package:goalkeeper/screens/all_friends_screen.dart';
-import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:goalkeeper/screens/profile/account_settings_screen.dart';
+import 'package:goalkeeper/screens/profile/all_friends_screen.dart';
+import 'package:goalkeeper/screens/auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:goalkeeper/screens/friend_profile_screen.dart';
+import 'package:goalkeeper/screens/profile/friend_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -179,7 +179,7 @@ class _FriendsSectionState extends State<FriendsSection> {
   }
 
   void _showAddFriendDialog(BuildContext context) {
-    final _emailController = TextEditingController();
+    final emailController = TextEditingController();
     final currentUser = FirebaseAuth.instance.currentUser;
 
     showDialog(
@@ -187,7 +187,7 @@ class _FriendsSectionState extends State<FriendsSection> {
       builder: (context) => AlertDialog(
         title: const Text('Add Friend'),
         content: TextField(
-          controller: _emailController,
+          controller: emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(labelText: 'Enter friend\'s email'),
         ),
@@ -198,7 +198,7 @@ class _FriendsSectionState extends State<FriendsSection> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final enteredEmail = _emailController.text.trim();
+              final enteredEmail = emailController.text.trim();
               if (enteredEmail.isEmpty || enteredEmail == currentUser?.email) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Enter a valid email')),
@@ -286,28 +286,46 @@ class _FriendsSectionState extends State<FriendsSection> {
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FriendProfileScreen(
-                                      friendEmail: friendEmail,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors
+                                  .click,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FriendProfileScreen(
+                                        friendEmail: friendEmail,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                              child: Column(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 30,
-                                    backgroundImage: NetworkImage(
-                                      friend['profileImage'] ?? '',
+                                  );
+                                },
+                                child: Column(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 30,
+                                      backgroundImage:
+                                          (friend['profileImage'] ?? '')
+                                              .isNotEmpty
+                                          ? NetworkImage(friend['profileImage'])
+                                          : null,
+                                      child:
+                                          (friend['profileImage'] ?? '').isEmpty
+                                          ? Text(
+                                              friend['name']
+                                                      ?.substring(0, 1)
+                                                      .toUpperCase() ??
+                                                  '?',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                              ),
+                                            )
+                                          : null,
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(friend['name'] ?? 'Friend'),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(friend['name'] ?? 'Friend'),
+                                  ],
+                                ),
                               ),
                             ),
                           );

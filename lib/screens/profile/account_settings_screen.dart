@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import service
+import 'package:goalkeeper/services/firestore_service.dart'; 
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -14,7 +14,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final _nameController = TextEditingController();
   final _profileImageController = TextEditingController();
 
-  final _firestoreService = FirestoreService(); // ✅ Use service
+  final _firestoreService = FirestoreService(); 
 
   bool _isLoading = false;
 
@@ -28,7 +28,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final email = FirebaseAuth.instance.currentUser?.email;
     if (email == null) return;
 
-    final user = await _firestoreService.getUserByEmail(email); // ✅ Use service
+    final user = await _firestoreService.getUserByEmail(email); 
     if (user == null) return;
 
     _nameController.text = user.name;
@@ -50,14 +50,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating profile: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -73,7 +73,27 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Account Settings')),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'Account Settings',
+              style: TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: _isLoading
@@ -85,8 +105,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(labelText: 'Name'),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Enter a name' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter a name'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -94,8 +115,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Profile Image URL',
                       ),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Enter image URL' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter image URL'
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:goalkeeper/screens/friend_profile_screen.dart';
-import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import FirestoreService
+import 'package:goalkeeper/screens/profile/friend_profile_screen.dart';
+import 'package:goalkeeper/services/firestore_service.dart';
 
 class AllFriendsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> friends;
@@ -41,11 +41,13 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
     final users = await _firestoreService.getUsersByEmails(user.friends);
 
     final friends = users
-        .map((u) => {
-              'email': u.id,
-              'name': u.name,
-              'profileImage': u.profileImage,
-            })
+        .map(
+          (u) => {
+            'email': u.id,
+            'name': u.name,
+            'profileImage': u.profileImage,
+          },
+        )
         .toList();
 
     setState(() {
@@ -66,7 +68,11 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
   }
 
   void _toggleFriend(String friendEmail, bool isFriend) async {
-    await _firestoreService.toggleFriend(currentUserEmail, friendEmail, isFriend);
+    await _firestoreService.toggleFriend(
+      currentUserEmail,
+      friendEmail,
+      isFriend,
+    );
     _loadFriends();
   }
 
@@ -90,7 +96,27 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
     final bool isOwnProfile = currentUserEmail == widget.fromEmail;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("All Friends")),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'All Friends',
+              style: TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+        ),
+      ),
       body: Column(
         children: [
           Padding(

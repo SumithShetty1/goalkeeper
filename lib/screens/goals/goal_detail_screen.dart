@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
-import 'package:goalkeeper/screens/create_goal_screen.dart';
+import 'package:goalkeeper/screens/goals/create_goal_screen.dart';
 
 class GoalDetailScreen extends StatelessWidget {
   final Goal goal;
@@ -22,35 +22,51 @@ class GoalDetailScreen extends StatelessWidget {
     final creatorName = goal.createdBy['name'] ?? 'Unknown';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Goal Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              final updatedGoal = await navigator.push(
-                MaterialPageRoute(
-                  builder: (context) => CreateGoalScreen(
-                    currentUserId: creatorEmail,
-                    currentUserName: creatorName,
-                    existingGoal: goal,
-                  ),
-                ),
-              );
-              if (updatedGoal != null) {
-                if (onUpdate != null) {
-                  onUpdate!(updatedGoal);
-                }
-              }
-            },
-          ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _confirmDelete(context),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-        ],
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'Goal Details',
+              style: TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  final updatedGoal = await navigator.push(
+                    MaterialPageRoute(
+                      builder: (context) => CreateGoalScreen(
+                        currentUserId: creatorEmail,
+                        currentUserName: creatorName,
+                        existingGoal: goal,
+                      ),
+                    ),
+                  );
+                  if (updatedGoal != null && onUpdate != null) {
+                    onUpdate!(updatedGoal);
+                  }
+                },
+              ),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _confirmDelete(context),
+                ),
+            ],
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -71,9 +87,8 @@ class GoalDetailScreen extends StatelessWidget {
                     children: [
                       Text(
                         goal.title,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -92,9 +107,9 @@ class GoalDetailScreen extends StatelessWidget {
             // Description
             Text(
               'Description',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(goal.description),

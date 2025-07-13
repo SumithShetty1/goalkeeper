@@ -5,9 +5,9 @@ class Goal {
   final bool isCompleted;
   final DateTime? dueDate;
   final DateTime createdAt;
-  final Map<String, String> createdBy; // {name: String, email: String}
+  final Map<String, String> createdBy; 
   final bool isGroupGoal;
-  final List<Map<String, String>> participants; // Array of {name, email} maps
+  final List<Map<String, String>> participants; 
 
   Goal({
     required this.id,

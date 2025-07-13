@@ -8,7 +8,6 @@ class FirestoreService {
   static const String usersCollection = 'users';
   static const String goalsCollection = 'goals';
 
-  // Add this method to FirestoreService
   Future<void> createUser(User user) async {
     await _firestore.collection(usersCollection).doc(user.id).set(user.toMap());
   }

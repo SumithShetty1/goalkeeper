@@ -25,7 +25,7 @@ class BucketListScreen extends StatelessWidget {
           goal: goals[index],
           onToggleComplete: () => onToggleComplete(index),
           onEdit: (updatedGoal) =>
-              onUpdateGoal(index, updatedGoal), // ✅ updated
+              onUpdateGoal(index, updatedGoal),
           onDelete: () => onDeleteGoal(index),
           showCheckbox: true,
           showParticipants: false,

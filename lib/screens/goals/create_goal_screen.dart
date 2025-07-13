@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
-import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import service
+import 'package:goalkeeper/services/firestore_service.dart'; 
 
 class CreateGoalScreen extends StatefulWidget {
   final String currentUserId;
@@ -31,7 +31,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Map<String, Map<String, String>> _friends = {};
   bool _isLoadingFriends = true;
 
-  final FirestoreService _firestoreService = FirestoreService(); // ✅
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       _isGroupGoal = widget.isGroupGoal!;
     }
 
-    _loadFriends(); // ✅ Load via FirestoreService
+    _loadFriends();
   }
 
   Future<void> _loadFriends() async {
@@ -58,11 +58,12 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       final user = await _firestoreService.getUserByEmail(widget.currentUserId);
       if (user == null) return;
 
-      final friendsList = await _firestoreService.getUsersByEmails(user.friends);
+      final friendsList = await _firestoreService.getUsersByEmails(
+        user.friends,
+      );
 
       final Map<String, Map<String, String>> loadedFriends = {
-        for (var f in friendsList)
-          f.id: {'email': f.id, 'name': f.name}
+        for (var f in friendsList) f.id: {'email': f.id, 'name': f.name},
       };
 
       setState(() {
@@ -114,8 +115,26 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.existingGoal == null ? 'Add New Goal' : 'Edit Goal'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              widget.existingGoal == null ? 'Add New Goal' : 'Edit Goal',
+              style: const TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -187,31 +206,30 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 _isLoadingFriends
                     ? const Center(child: CircularProgressIndicator())
                     : _friends.isEmpty
-                        ? const Text('No friends found')
-                        : Wrap(
-                            spacing: 8.0,
-                            runSpacing: 8.0,
-                            children: _friends.entries.map((entry) {
-                              return FilterChip(
-                                label: Text(entry.value['name'] ?? ''),
-                                selected: _selectedParticipants.any(
-                                  (p) => p['email'] == entry.key,
-                                ),
-                                onSelected: (_) =>
-                                    _toggleParticipant(entry.key),
-                                avatar: CircleAvatar(
-                                  child: Text(
-                                    entry.value['name']
-                                            ?.substring(0, 1)
-                                            .toUpperCase() ??
-                                        '?',
-                                  ),
-                                ),
-                                backgroundColor: Colors.grey[200],
-                                selectedColor: Colors.blue[100],
-                              );
-                            }).toList(),
-                          ),
+                    ? const Text('No friends found')
+                    : Wrap(
+                        spacing: 8.0,
+                        runSpacing: 8.0,
+                        children: _friends.entries.map((entry) {
+                          return FilterChip(
+                            label: Text(entry.value['name'] ?? ''),
+                            selected: _selectedParticipants.any(
+                              (p) => p['email'] == entry.key,
+                            ),
+                            onSelected: (_) => _toggleParticipant(entry.key),
+                            avatar: CircleAvatar(
+                              child: Text(
+                                entry.value['name']
+                                        ?.substring(0, 1)
+                                        .toUpperCase() ??
+                                    '?',
+                              ),
+                            ),
+                            backgroundColor: Colors.grey[200],
+                            selectedColor: Colors.blue[100],
+                          );
+                        }).toList(),
+                      ),
                 const SizedBox(height: 16),
               ],
               const SizedBox(height: 24),
@@ -219,7 +237,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     final goal = Goal(
-                      id: widget.existingGoal?.id ??
+                      id:
+                          widget.existingGoal?.id ??
                           DateTime.now().millisecondsSinceEpoch.toString(),
                       title: _titleController.text,
                       description: _descriptionController.text,
