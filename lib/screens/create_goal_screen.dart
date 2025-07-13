@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
+import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import service
 
 class CreateGoalScreen extends StatefulWidget {
   final String currentUserId;
@@ -31,6 +31,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Map<String, Map<String, String>> _friends = {};
   bool _isLoadingFriends = true;
 
+  final FirestoreService _firestoreService = FirestoreService(); // ✅
+
   @override
   void initState() {
     super.initState();
@@ -48,38 +50,20 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       _isGroupGoal = widget.isGroupGoal!;
     }
 
-    _loadFriends();
+    _loadFriends(); // ✅ Load via FirestoreService
   }
 
   Future<void> _loadFriends() async {
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.currentUserId)
-          .get();
+      final user = await _firestoreService.getUserByEmail(widget.currentUserId);
+      if (user == null) return;
 
-      final userData = userDoc.data();
-      if (userData == null) return;
+      final friendsList = await _firestoreService.getUsersByEmails(user.friends);
 
-      final List<String> friendEmails =
-          List<String>.from(userData['friends'] ?? []);
-
-      Map<String, Map<String, String>> loadedFriends = {};
-
-      for (String email in friendEmails) {
-        final friendDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(email)
-            .get();
-
-        if (friendDoc.exists) {
-          final friendData = friendDoc.data()!;
-          loadedFriends[email] = {
-            'email': email,
-            'name': friendData['name'] ?? 'Unknown',
-          };
-        }
-      }
+      final Map<String, Map<String, String>> loadedFriends = {
+        for (var f in friendsList)
+          f.id: {'email': f.id, 'name': f.name}
+      };
 
       setState(() {
         _friends = loadedFriends;

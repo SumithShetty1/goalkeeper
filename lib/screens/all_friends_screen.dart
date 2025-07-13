@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:goalkeeper/screens/friend_profile_screen.dart';
+import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import FirestoreService
 
 class AllFriendsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> friends;
@@ -21,6 +21,9 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
   final String currentUserEmail =
       FirebaseAuth.instance.currentUser?.email ?? '';
   final TextEditingController _searchController = TextEditingController();
+
+  final FirestoreService _firestoreService = FirestoreService();
+
   List<Map<String, dynamic>> _friends = [];
   List<Map<String, dynamic>> _filteredFriends = [];
 
@@ -32,23 +35,17 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
   }
 
   Future<void> _loadFriends() async {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.fromEmail) // ✅ Use the passed-in user
-        .get();
+    final user = await _firestoreService.getUserByEmail(widget.fromEmail);
+    if (user == null) return;
 
-    final List<String> friendIds =
-        List<String>.from(userDoc.data()?['friends'] ?? []);
+    final users = await _firestoreService.getUsersByEmails(user.friends);
 
-    final friendDocs = await Future.wait(
-      friendIds.map(
-        (email) => FirebaseFirestore.instance.collection('users').doc(email).get(),
-      ),
-    );
-
-    final friends = friendDocs
-        .where((doc) => doc.exists)
-        .map((doc) => {'email': doc.id, ...doc.data()!})
+    final friends = users
+        .map((u) => {
+              'email': u.id,
+              'name': u.name,
+              'profileImage': u.profileImage,
+            })
         .toList();
 
     setState(() {
@@ -69,14 +66,7 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
   }
 
   void _toggleFriend(String friendEmail, bool isFriend) async {
-    final userRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserEmail);
-    await userRef.update({
-      'friends': isFriend
-          ? FieldValue.arrayRemove([friendEmail])
-          : FieldValue.arrayUnion([friendEmail]),
-    });
+    await _firestoreService.toggleFriend(currentUserEmail, friendEmail, isFriend);
     _loadFriends();
   }
 

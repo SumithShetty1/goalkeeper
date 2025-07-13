@@ -8,6 +8,11 @@ class FirestoreService {
   static const String usersCollection = 'users';
   static const String goalsCollection = 'goals';
 
+  // Add this method to FirestoreService
+  Future<void> createUser(User user) async {
+    await _firestore.collection(usersCollection).doc(user.id).set(user.toMap());
+  }
+
   // Fetch user by email
   Future<User?> getUserByEmail(String email) async {
     try {
@@ -22,6 +27,46 @@ class FirestoreService {
       print('Error fetching user: $e');
       return null;
     }
+  }
+
+  // Fetch multiple users by email
+  Future<List<User>> getUsersByEmails(List<String> emails) async {
+    final userDocs = await Future.wait(
+      emails.map(
+        (email) => _firestore.collection(usersCollection).doc(email).get(),
+      ),
+    );
+    return userDocs
+        .where((doc) => doc.exists)
+        .map((doc) => User.fromMap(doc.data()!))
+        .toList();
+  }
+
+  // Add or remove friend
+  Future<void> toggleFriend(
+    String currentUserEmail,
+    String friendEmail,
+    bool isFriend,
+  ) async {
+    final userRef = _firestore
+        .collection(usersCollection)
+        .doc(currentUserEmail);
+    await userRef.update({
+      'friends': isFriend
+          ? FieldValue.arrayRemove([friendEmail])
+          : FieldValue.arrayUnion([friendEmail]),
+    });
+  }
+
+  Future<void> updateUserProfile(
+    String email,
+    String name,
+    String profileImage,
+  ) async {
+    await _firestore.collection(usersCollection).doc(email).update({
+      'name': name,
+      'profileImage': profileImage,
+    });
   }
 
   // Get all goals where user's email is in participants
@@ -43,10 +88,7 @@ class FirestoreService {
             for (String email in List<String>.from(goalData['participants'])) {
               final user = await getUserByEmail(email);
               if (user != null) {
-                participants.add({
-                  'email': email,
-                  'name': user.name,
-                });
+                participants.add({'email': email, 'name': user.name});
               }
             }
 
@@ -82,7 +124,9 @@ class FirestoreService {
       'createdAt': goal.createdAt,
       'createdBy': goal.createdBy['email'], // store only email
       'isGroupGoal': goal.isGroupGoal,
-      'participants': goal.participants.map((p) => p['email']).toList(), // only emails
+      'participants': goal.participants
+          .map((p) => p['email'])
+          .toList(), // only emails
     });
   }
 

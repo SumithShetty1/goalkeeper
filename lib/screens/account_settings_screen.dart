@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:goalkeeper/services/firestore_service.dart'; // ✅ Import service
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -14,6 +14,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final _nameController = TextEditingController();
   final _profileImageController = TextEditingController();
 
+  final _firestoreService = FirestoreService(); // ✅ Use service
+
   bool _isLoading = false;
 
   @override
@@ -26,12 +28,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final email = FirebaseAuth.instance.currentUser?.email;
     if (email == null) return;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(email).get();
-    if (!doc.exists) return;
+    final user = await _firestoreService.getUserByEmail(email); // ✅ Use service
+    if (user == null) return;
 
-    final data = doc.data()!;
-    _nameController.text = data['name'] ?? '';
-    _profileImageController.text = data['profileImage'] ?? '';
+    _nameController.text = user.name;
+    _profileImageController.text = user.profileImage;
   }
 
   Future<void> _updateUserData() async {
@@ -39,19 +40,20 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
     setState(() => _isLoading = true);
     final email = FirebaseAuth.instance.currentUser?.email;
+    if (email == null) return;
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(email).update({
-        'name': _nameController.text.trim(),
-        'profileImage': _profileImageController.text.trim(),
-      });
+      await _firestoreService.updateUserProfile(
+        email,
+        _nameController.text.trim(),
+        _profileImageController.text.trim(),
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated')),
       );
-
-      Navigator.pop(context); // Go back to ProfileScreen
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating profile: $e')),

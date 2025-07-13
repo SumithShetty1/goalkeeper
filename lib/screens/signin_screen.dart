@@ -1,11 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/screens/home_screen.dart';
 import 'package:goalkeeper/screens/login_screen.dart';
+import 'package:goalkeeper/services/firestore_service.dart';
+import 'package:goalkeeper/models/user.dart' as AppUser;
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({Key? key}) : super(key: key);
+  const SignUpScreen({super.key});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -33,12 +34,13 @@ class _SignUpScreenState extends State<SignUpScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _animationController.forward();
   }
 
@@ -57,9 +59,9 @@ class _SignUpScreenState extends State<SignUpScreen>
     final password = passwordController.text.trim();
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
@@ -73,15 +75,19 @@ class _SignUpScreenState extends State<SignUpScreen>
 
       await userCredential.user?.updateDisplayName(name);
 
-      final profileImage = "https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=random";
+      final profileImage =
+          "https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=random";
 
-      await FirebaseFirestore.instance.collection('users').doc(email).set({
-        'id': email,
-        'name': name,
-        'profileImage': profileImage,
-        'joinedDate': DateTime.now().toIso8601String(),
-        'friends': [],
-      });
+      final user = AppUser.User(
+        id: email,
+        name: name,
+        profileImage: profileImage,
+        joinedDate: DateTime.now(),
+        friends: [],
+      );
+
+      final firestoreService = FirestoreService();
+      await firestoreService.createUser(user); // ✅ Use FirestoreService here
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -90,9 +96,9 @@ class _SignUpScreenState extends State<SignUpScreen>
         );
       }
     } on FirebaseAuthException catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Signup failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message ?? 'Signup failed')));
     } finally {
       if (mounted) {
         setState(() {
@@ -226,7 +232,10 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   child: Ink(
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
-                                        colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+                                        colors: [
+                                          Color(0xFFf093fb),
+                                          Color(0xFFf5576c),
+                                        ],
                                       ),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -257,7 +266,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => const LoginScreen()),
+                                    builder: (_) => const LoginScreen(),
+                                  ),
                                 );
                               },
                               child: const Text(
@@ -329,8 +339,10 @@ class _SignUpScreenState extends State<SignUpScreen>
                     )
                   : null,
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
               hintStyle: TextStyle(color: Colors.grey[400]),
             ),
           ),
