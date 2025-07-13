@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:goalkeeper/models/goal.dart';
 import 'package:goalkeeper/screens/all_friends_screen.dart';
-import 'package:goalkeeper/screens/profile_screen.dart'; // 👈 Import your own profile screen
+import 'package:goalkeeper/screens/profile_screen.dart';
+import 'package:goalkeeper/widgets/goal_card.dart';
 
 class FriendProfileScreen extends StatefulWidget {
   final String friendEmail;
@@ -15,6 +17,7 @@ class FriendProfileScreen extends StatefulWidget {
 
 class _FriendProfileScreenState extends State<FriendProfileScreen> {
   late Future<Map<String, dynamic>> _friendDataFuture;
+  late Future<List<Goal>> _sharedGoalsFuture;
   final String currentUserEmail =
       FirebaseAuth.instance.currentUser?.email ?? '';
 
@@ -22,6 +25,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
   void initState() {
     super.initState();
     _friendDataFuture = _fetchFriendData();
+    _sharedGoalsFuture = _fetchSharedGoals();
   }
 
   Future<Map<String, dynamic>> _fetchFriendData() async {
@@ -30,9 +34,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         .doc(widget.friendEmail)
         .get();
 
-    if (!doc.exists) {
-      throw Exception('User not found');
-    }
+    if (!doc.exists) throw Exception('User not found');
 
     final data = doc.data()!;
     data['email'] = widget.friendEmail;
@@ -54,6 +56,60 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       data['email'] = doc.id;
       return data;
     }).toList();
+  }
+
+  Future<List<Goal>> _fetchSharedGoals() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('goals')
+        .where('participants', arrayContains: widget.friendEmail)
+        .get();
+
+    final List<Goal> sharedGoals = [];
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final List<String> participants = List<String>.from(data['participants']);
+
+      // Check if current user is also a participant
+      if (!participants.contains(currentUserEmail)) continue;
+
+      // Fetch user details for creator and participants
+      final createdByEmail = data['createdBy'];
+      final creatorDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(createdByEmail)
+          .get();
+
+      final createdByName = creatorDoc.data()?['name'] ?? 'Unknown';
+
+      final List<Map<String, String>> participantsDetailed = [];
+      for (var email in participants) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(email)
+            .get();
+        final name = userDoc.data()?['name'] ?? 'Unknown';
+        participantsDetailed.add({'email': email, 'name': name});
+      }
+
+      data['id'] = doc.id;
+
+      sharedGoals.add(
+        Goal(
+          id: doc.id,
+          title: data['title'],
+          description: data['description'],
+          isCompleted: data['isCompleted'] ?? false,
+          dueDate: data['dueDate']?.toDate(),
+          createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+          createdBy: {'email': createdByEmail, 'name': createdByName},
+          isGroupGoal: data['isGroupGoal'] ?? false,
+          participants: participantsDetailed,
+        ),
+      );
+    }
+
+    return sharedGoals;
   }
 
   Future<void> _toggleFriend(bool isFriend) async {
@@ -82,6 +138,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
 
     setState(() {
       _friendDataFuture = _fetchFriendData();
+      _sharedGoalsFuture = _fetchSharedGoals();
     });
   }
 
@@ -101,12 +158,10 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _friendDataFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting)
             return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData)
             return const Center(child: Text('Friend not found.'));
-          }
 
           final data = snapshot.data!;
           final name = data['name'] ?? 'Unknown';
@@ -121,42 +176,49 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: NetworkImage(profileImage),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: NetworkImage(profileImage),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(email, style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Member since ${years > 0 ? '$years year${years > 1 ? 's' : ''}' : 'this year'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      if (email != currentUserEmail)
+                        ElevatedButton(
+                          onPressed: () => _toggleFriend(isFriend),
+                          child: Text(
+                            isFriend ? 'Remove Friend' : 'Add Friend',
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(email, style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 8),
-                Text(
-                  'Member since ${years > 0 ? '$years year${years > 1 ? 's' : ''}' : 'this year'}',
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                if (email != currentUserEmail)
-                  ElevatedButton(
-                    onPressed: () => _toggleFriend(isFriend),
-                    child: Text(isFriend ? 'Remove Friend' : 'Add Friend'),
-                  ),
+
                 const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Friends (${friendIds.length})',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Text(
+                  'Friends (${friendIds.length})',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -207,27 +269,109 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                                   },
                                 ),
                               ),
-                              if (friends.isNotEmpty)
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AllFriendsScreen(
-                                                friends: friends,
-                                                fromEmail: email,
-                                              ),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => AllFriendsScreen(
+                                          friends: friends,
+                                          fromEmail: email,
                                         ),
-                                      );
-                                    },
-                                    child: const Text('View All Friends'),
-                                  ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('View All Friends'),
                                 ),
+                              ),
                             ],
                           );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+                Text(
+                  'Shared Goals',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<Goal>>(
+                  future: _sharedGoalsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final sharedGoals = snapshot.data ?? [];
+
+                    if (sharedGoals.isEmpty) {
+                      return const Text('No shared goals found');
+                    }
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: sharedGoals.length,
+                      itemBuilder: (context, index) {
+                        final goal = sharedGoals[index];
+
+                        return GoalCard(
+                          goal: goal,
+                          showCheckbox: true,
+                          showParticipants: true,
+                          onToggleComplete: () async {
+                            await FirebaseFirestore.instance
+                                .collection('goals')
+                                .doc(goal.id)
+                                .update({'isCompleted': !goal.isCompleted});
+                            setState(() {
+                              _sharedGoalsFuture = _fetchSharedGoals();
+                            });
+                          },
+                          onEdit: (updatedGoal) async {
+                            // Save updated goal to Firestore directly
+                            await FirebaseFirestore.instance
+                                .collection('goals')
+                                .doc(updatedGoal.id)
+                                .update({
+                                  'title': updatedGoal.title,
+                                  'description': updatedGoal.description,
+                                  'dueDate': updatedGoal.dueDate,
+                                  'isCompleted': updatedGoal.isCompleted,
+                                  'isGroupGoal': updatedGoal.isGroupGoal,
+                                  'participants': updatedGoal.participants
+                                      .map((p) => p['email'])
+                                      .toList(),
+                                });
+
+                            setState(() {
+                              _sharedGoalsFuture = _fetchSharedGoals();
+                            });
+                          },
+                          onDelete: () async {
+                            await FirebaseFirestore.instance
+                                .collection('goals')
+                                .doc(goal.id)
+                                .delete();
+
+                            setState(() {
+                              _sharedGoalsFuture = _fetchSharedGoals();
+                            });
+                          },
+
+                          users: {
+                            for (var p in goal.participants)
+                              if (p['email'] != null && p['name'] != null)
+                                p['email']!: p['name']!,
+                          },
+                        );
+                      },
+                    );
                   },
                 ),
               ],

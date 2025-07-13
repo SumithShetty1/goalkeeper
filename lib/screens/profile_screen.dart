@@ -54,6 +54,7 @@ class ProfileScreen extends StatelessWidget {
                   userData: userData,
                   totalGoals: totalGoals,
                   completedGoals: completedGoals,
+                  email: user.email ?? '',
                 ),
                 FriendsSection(
                   friendIds: List<String>.from(userData['friends'] ?? []),
@@ -72,12 +73,14 @@ class UserProfileHeader extends StatelessWidget {
   final Map<String, dynamic> userData;
   final int totalGoals;
   final int completedGoals;
+  final String email;
 
   const UserProfileHeader({
     super.key,
     required this.userData,
     required this.totalGoals,
     required this.completedGoals,
+    required this.email,
   });
 
   @override
@@ -98,6 +101,11 @@ class UserProfileHeader extends StatelessWidget {
           Text(
             userData['name'] ?? 'Unknown',
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            email,
+            style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 8),
           Text(
