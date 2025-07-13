@@ -310,14 +310,26 @@ class _FriendsSectionState extends State<FriendsSection> {
               );
             },
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AllFriendsScreen()),
-              );
-            },
-            child: const Text('View All Friends'),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () async {
+                final friends = await _friendFuture;
+                final currentUserEmail =
+                    FirebaseAuth.instance.currentUser?.email ?? '';
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AllFriendsScreen(
+                      friends: friends,
+                      fromEmail: currentUserEmail,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('View All Friends'),
+            ),
           ),
         ],
       ),

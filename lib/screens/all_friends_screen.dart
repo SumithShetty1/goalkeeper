@@ -4,7 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:goalkeeper/screens/friend_profile_screen.dart';
 
 class AllFriendsScreen extends StatefulWidget {
-  const AllFriendsScreen({super.key});
+  final List<Map<String, dynamic>> friends;
+  final String fromEmail;
+
+  const AllFriendsScreen({
+    super.key,
+    required this.friends,
+    required this.fromEmail,
+  });
 
   @override
   State<AllFriendsScreen> createState() => _AllFriendsScreenState();
@@ -27,16 +34,15 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
   Future<void> _loadFriends() async {
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .doc(currentUserEmail)
+        .doc(widget.fromEmail) // ✅ Use the passed-in user
         .get();
-    final List<String> friendIds = List<String>.from(
-      userDoc.data()?['friends'] ?? [],
-    );
+
+    final List<String> friendIds =
+        List<String>.from(userDoc.data()?['friends'] ?? []);
 
     final friendDocs = await Future.wait(
       friendIds.map(
-        (email) =>
-            FirebaseFirestore.instance.collection('users').doc(email).get(),
+        (email) => FirebaseFirestore.instance.collection('users').doc(email).get(),
       ),
     );
 
@@ -91,6 +97,8 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isOwnProfile = currentUserEmail == widget.fromEmail;
+
     return Scaffold(
       appBar: AppBar(title: const Text("All Friends")),
       body: Column(
@@ -122,13 +130,15 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
                   ),
                   title: Text(name),
                   subtitle: Text(email),
-                  trailing: IconButton(
-                    icon: Icon(
-                      isFriend ? Icons.person_remove : Icons.person_add,
-                      color: isFriend ? Colors.red : Colors.green,
-                    ),
-                    onPressed: () => _toggleFriend(email, isFriend),
-                  ),
+                  trailing: isOwnProfile
+                      ? IconButton(
+                          icon: Icon(
+                            isFriend ? Icons.person_remove : Icons.person_add,
+                            color: isFriend ? Colors.red : Colors.green,
+                          ),
+                          onPressed: () => _toggleFriend(email, isFriend),
+                        )
+                      : null,
                   onTap: () => _viewProfile(email),
                 );
               },

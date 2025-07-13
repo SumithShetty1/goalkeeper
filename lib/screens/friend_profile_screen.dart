@@ -1,39 +1,235 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:goalkeeper/screens/all_friends_screen.dart';
+import 'package:goalkeeper/screens/profile_screen.dart'; // 👈 Import your own profile screen
 
-class FriendProfileScreen extends StatelessWidget {
+class FriendProfileScreen extends StatefulWidget {
   final String friendEmail;
 
   const FriendProfileScreen({super.key, required this.friendEmail});
 
   @override
+  State<FriendProfileScreen> createState() => _FriendProfileScreenState();
+}
+
+class _FriendProfileScreenState extends State<FriendProfileScreen> {
+  late Future<Map<String, dynamic>> _friendDataFuture;
+  final String currentUserEmail =
+      FirebaseAuth.instance.currentUser?.email ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _friendDataFuture = _fetchFriendData();
+  }
+
+  Future<Map<String, dynamic>> _fetchFriendData() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.friendEmail)
+        .get();
+
+    if (!doc.exists) {
+      throw Exception('User not found');
+    }
+
+    final data = doc.data()!;
+    data['email'] = widget.friendEmail;
+    return data;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchFriendsList(
+    List<String> friendIds,
+  ) async {
+    if (friendIds.isEmpty) return [];
+
+    final firestore = FirebaseFirestore.instance;
+    final friendDocs = await Future.wait(
+      friendIds.map((id) => firestore.collection('users').doc(id).get()),
+    );
+
+    return friendDocs.where((doc) => doc.exists).map((doc) {
+      final data = doc.data()!;
+      data['email'] = doc.id;
+      return data;
+    }).toList();
+  }
+
+  Future<void> _toggleFriend(bool isFriend) async {
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserEmail);
+    final friendDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.friendEmail);
+
+    if (isFriend) {
+      await userDoc.update({
+        'friends': FieldValue.arrayRemove([widget.friendEmail]),
+      });
+      await friendDoc.update({
+        'friends': FieldValue.arrayRemove([currentUserEmail]),
+      });
+    } else {
+      await userDoc.update({
+        'friends': FieldValue.arrayUnion([widget.friendEmail]),
+      });
+      await friendDoc.update({
+        'friends': FieldValue.arrayUnion([currentUserEmail]),
+      });
+    }
+
+    setState(() {
+      _friendDataFuture = _fetchFriendData();
+    });
+  }
+
+  void _navigateToProfile(String email) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FriendProfileScreen(friendEmail: email),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Friend Profile')),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(friendEmail).get(),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _friendDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Friend data not found.'));
+          if (!snapshot.hasData) {
+            return const Center(child: Text('Friend not found.'));
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final data = snapshot.data!;
+          final name = data['name'] ?? 'Unknown';
+          final profileImage = data['profileImage'] ?? '';
+          final email = data['email'];
+          final friendIds = List<String>.from(data['friends'] ?? []);
+          final isFriend = friendIds.contains(currentUserEmail);
+          final joinDateStr = data['joinedDate'] ?? '';
+          final joinDate = DateTime.tryParse(joinDateStr) ?? DateTime.now();
+          final years = DateTime.now().difference(joinDate).inDays ~/ 365;
 
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                const SizedBox(height: 10),
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: NetworkImage(data['profileImage'] ?? ''),
+                  backgroundImage: NetworkImage(profileImage),
                 ),
                 const SizedBox(height: 16),
-                Text(data['name'] ?? 'Unknown', style: const TextStyle(fontSize: 24)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(email, style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 8),
-                Text(data['email'] ?? friendEmail, style: const TextStyle(color: Colors.grey)),
+                Text(
+                  'Member since ${years > 0 ? '$years year${years > 1 ? 's' : ''}' : 'this year'}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                if (email != currentUserEmail)
+                  ElevatedButton(
+                    onPressed: () => _toggleFriend(isFriend),
+                    child: Text(isFriend ? 'Remove Friend' : 'Add Friend'),
+                  ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Friends (${friendIds.length})',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _fetchFriendsList(friendIds),
+                  builder: (context, friendsSnap) {
+                    if (friendsSnap.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final friends = friendsSnap.data ?? [];
+
+                    return friends.isEmpty
+                        ? const Center(child: Text('No friends yet'))
+                        : Column(
+                            children: [
+                              SizedBox(
+                                height: 100,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: friends.length > 10
+                                      ? 10
+                                      : friends.length,
+                                  itemBuilder: (context, index) {
+                                    final friend = friends[index];
+                                    return GestureDetector(
+                                      onTap: () =>
+                                          _navigateToProfile(friend['email']),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 12.0,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 30,
+                                              backgroundImage: NetworkImage(
+                                                friend['profileImage'] ?? '',
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(friend['name'] ?? 'Friend'),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              if (friends.isNotEmpty)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              AllFriendsScreen(
+                                                friends: friends,
+                                                fromEmail: email,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('View All Friends'),
+                                  ),
+                                ),
+                            ],
+                          );
+                  },
+                ),
               ],
             ),
           );
