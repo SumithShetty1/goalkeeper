@@ -1,6 +1,6 @@
-# goalkeeper
+# GoalKeeper
 
-A new Flutter project.
+A goal-tracking Flutter app to manage personal and group goals, collaborate with friends, and stay productive.
 
 ## Getting Started
 

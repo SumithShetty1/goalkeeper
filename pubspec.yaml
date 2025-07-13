@@ -1,5 +1,5 @@
 name: goalkeeper
-description: A smart goal-tracking Flutter app to manage personal and group goals, collaborate with friends, and stay productive.
+description: "A goal-tracking Flutter app to manage personal and group goals, collaborate with friends, and stay productive."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
