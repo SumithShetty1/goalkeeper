@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:goalkeeper/screens/account_settings_screen.dart';
 import 'package:goalkeeper/screens/all_friends_screen.dart';
 import 'package:goalkeeper/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -103,10 +104,7 @@ class UserProfileHeader extends StatelessWidget {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          Text(
-            email,
-            style: const TextStyle(color: Colors.grey),
-          ),
+          Text(email, style: const TextStyle(color: Colors.grey)),
           const SizedBox(height: 8),
           Text(
             'Member since ${years > 0 ? '$years year${years > 1 ? 's' : ''}' : 'this year'}',
@@ -170,7 +168,7 @@ class _FriendsSectionState extends State<FriendsSection> {
 
     return friendDocs
         .where((doc) => doc.exists)
-        .map((doc) => doc.data()! as Map<String, dynamic>)
+        .map((doc) => doc.data()!)
         .toList();
   }
 
@@ -380,7 +378,14 @@ class SettingsSection extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Account Settings'),
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AccountSettingsScreen(),
+                ),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.help),

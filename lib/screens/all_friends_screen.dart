@@ -48,7 +48,7 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
 
     final friends = friendDocs
         .where((doc) => doc.exists)
-        .map((doc) => {'email': doc.id, ...doc.data()! as Map<String, dynamic>})
+        .map((doc) => {'email': doc.id, ...doc.data()!})
         .toList();
 
     setState(() {
@@ -133,7 +133,9 @@ class _AllFriendsScreenState extends State<AllFriendsScreen> {
                   trailing: isOwnProfile
                       ? IconButton(
                           icon: Icon(
+                            // ignore: dead_code
                             isFriend ? Icons.person_remove : Icons.person_add,
+                            // ignore: dead_code
                             color: isFriend ? Colors.red : Colors.green,
                           ),
                           onPressed: () => _toggleFriend(email, isFriend),

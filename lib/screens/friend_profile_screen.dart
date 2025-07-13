@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
 import 'package:goalkeeper/screens/all_friends_screen.dart';
-import 'package:goalkeeper/screens/profile_screen.dart';
 import 'package:goalkeeper/widgets/goal_card.dart';
 
 class FriendProfileScreen extends StatefulWidget {
