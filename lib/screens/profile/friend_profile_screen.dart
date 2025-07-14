@@ -168,13 +168,39 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (email != currentUserEmail)
-                        ElevatedButton(
-                          onPressed: () => _toggleFriend(isFriend),
-                          style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.black,
+                        Container(
+                          width: 180,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                          isFriend ? 'Remove Friend' : 'Add Friend',
+                          child: ElevatedButton(
+                            onPressed: () => _toggleFriend(isFriend),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              isFriend ? 'Remove Friend' : 'Add Friend',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
                           ),
                         ),
                     ],

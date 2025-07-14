@@ -184,12 +184,39 @@ class GoalDetailScreen extends StatelessWidget {
             if (!goal.isCompleted && onToggleComplete != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: ElevatedButton.icon(
-                  onPressed: onToggleComplete,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Mark as Complete'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
+                child: Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF667eea).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: onToggleComplete,
+                    icon: const Icon(Icons.check, color: Colors.white),
+                    label: const Text(
+                      'Mark as Complete',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
               ),

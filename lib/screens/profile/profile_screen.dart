@@ -196,48 +196,80 @@ class _FriendsSectionState extends State<FriendsSection> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final enteredEmail = emailController.text.trim();
-              if (enteredEmail.isEmpty || enteredEmail == currentUser?.email) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Enter a valid email')),
-                );
-                return;
-              }
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF667eea).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: () async {
+                final enteredEmail = emailController.text.trim();
+                if (enteredEmail.isEmpty ||
+                    enteredEmail == currentUser?.email) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Enter a valid email')),
+                  );
+                  return;
+                }
 
-              final userDoc = FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser!.email);
-              final friendDoc = FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(enteredEmail);
+                final userDoc = FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(currentUser!.email);
+                final friendDoc = FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(enteredEmail);
 
-              final friendSnap = await friendDoc.get();
-              if (!friendSnap.exists) {
+                final friendSnap = await friendDoc.get();
+                if (!friendSnap.exists) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('User not found')),
+                  );
+                  return;
+                }
+
+                await userDoc.update({
+                  'friends': FieldValue.arrayUnion([enteredEmail]),
+                });
+
+                await friendDoc.update({
+                  'friends': FieldValue.arrayUnion([currentUser.email]),
+                });
+
+                Navigator.pop(context);
                 ScaffoldMessenger.of(
                   context,
-                ).showSnackBar(const SnackBar(content: Text('User not found')));
-                return;
-              }
+                ).showSnackBar(const SnackBar(content: Text('Friend added!')));
 
-              await userDoc.update({
-                'friends': FieldValue.arrayUnion([enteredEmail]),
-              });
-
-              await friendDoc.update({
-                'friends': FieldValue.arrayUnion([currentUser.email]),
-              });
-
-              Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Friend added!')));
-
-              // ✅ Refresh friends list
-              _refreshFriends();
-            },
-            child: const Text('Add'),
+                _refreshFriends();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                'Add',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -287,8 +319,7 @@ class _FriendsSectionState extends State<FriendsSection> {
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: MouseRegion(
-                              cursor: SystemMouseCursors
-                                  .click,
+                              cursor: SystemMouseCursors.click,
                               child: InkWell(
                                 onTap: () {
                                   Navigator.push(

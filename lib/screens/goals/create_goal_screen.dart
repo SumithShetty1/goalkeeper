@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:goalkeeper/models/goal.dart';
-import 'package:goalkeeper/services/firestore_service.dart'; 
+import 'package:goalkeeper/services/firestore_service.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final String currentUserId;
@@ -232,45 +232,67 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       ),
                 const SizedBox(height: 16),
               ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final goal = Goal(
-                      id:
-                          widget.existingGoal?.id ??
-                          DateTime.now().millisecondsSinceEpoch.toString(),
-                      title: _titleController.text,
-                      description: _descriptionController.text,
-                      dueDate: _dueDate,
-                      createdBy: {
-                        'email': widget.currentUserId,
-                        'name': widget.currentUserName,
-                      },
-                      isGroupGoal: _isGroupGoal,
-                      participants: [
-                        ..._selectedParticipants,
-                        {
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF667eea).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final goal = Goal(
+                        id:
+                            widget.existingGoal?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: _titleController.text,
+                        description: _descriptionController.text,
+                        dueDate: _dueDate,
+                        createdBy: {
                           'email': widget.currentUserId,
                           'name': widget.currentUserName,
                         },
-                      ],
-                      isCompleted: widget.existingGoal?.isCompleted ?? false,
-                      createdAt:
-                          widget.existingGoal?.createdAt ?? DateTime.now(),
-                    );
-                    Navigator.pop(context, goal);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                        isGroupGoal: _isGroupGoal,
+                        participants: [
+                          ..._selectedParticipants,
+                          {
+                            'email': widget.currentUserId,
+                            'name': widget.currentUserName,
+                          },
+                        ],
+                        isCompleted: widget.existingGoal?.isCompleted ?? false,
+                        createdAt:
+                            widget.existingGoal?.createdAt ?? DateTime.now(),
+                      );
+                      Navigator.pop(context, goal);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
-                child: Text(
-                  widget.existingGoal == null ? 'Save Goal' : 'Update Goal',
-                  style: const TextStyle(fontSize: 16),
+                  child: Text(
+                    widget.existingGoal == null ? 'Save Goal' : 'Update Goal',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],

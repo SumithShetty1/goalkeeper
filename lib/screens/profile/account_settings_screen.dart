@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:goalkeeper/services/firestore_service.dart'; 
+import 'package:goalkeeper/services/firestore_service.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -14,7 +14,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final _nameController = TextEditingController();
   final _profileImageController = TextEditingController();
 
-  final _firestoreService = FirestoreService(); 
+  final _firestoreService = FirestoreService();
 
   bool _isLoading = false;
 
@@ -28,7 +28,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final email = FirebaseAuth.instance.currentUser?.email;
     if (email == null) return;
 
-    final user = await _firestoreService.getUserByEmail(email); 
+    final user = await _firestoreService.getUserByEmail(email);
     if (user == null) return;
 
     _nameController.text = user.name;
@@ -120,9 +120,39 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                           : null,
                     ),
                     const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _updateUserData,
-                      child: const Text('Save Changes'),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF667eea).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _updateUserData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save Changes',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
