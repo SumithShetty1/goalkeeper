@@ -203,8 +203,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(0xFF667eea).withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
