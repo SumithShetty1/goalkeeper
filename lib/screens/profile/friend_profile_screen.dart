@@ -20,13 +20,13 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       FirebaseAuth.instance.currentUser?.email ?? '';
 
   late Future<Map<String, dynamic>> _friendDataFuture;
-  late Future<List<Goal>> _sharedGoalsFuture;
+  late Stream<List<Goal>> _sharedGoalsStream;
 
   @override
   void initState() {
     super.initState();
     _friendDataFuture = _fetchFriendData();
-    _sharedGoalsFuture = _fetchSharedGoals();
+    _sharedGoalsStream = _fetchSharedGoalsStream();
   }
 
   Future<Map<String, dynamic>> _fetchFriendData() async {
@@ -56,16 +56,15 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         .toList();
   }
 
-  Future<List<Goal>> _fetchSharedGoals() async {
-    final allGoals = await _firestoreService
-        .getGoalsForUser(currentUserEmail)
-        .first;
-    return allGoals.where((goal) {
-      final participantEmails = goal.participants
-          .map((p) => p['email'])
-          .toList();
-      return participantEmails.contains(widget.friendEmail);
-    }).toList();
+  Stream<List<Goal>> _fetchSharedGoalsStream() {
+    return _firestoreService.getGoalsForUser(currentUserEmail).map((allGoals) {
+      return allGoals.where((goal) {
+        final participantEmails = goal.participants
+            .map((p) => p['email'])
+            .toList();
+        return participantEmails.contains(widget.friendEmail);
+      }).toList();
+    });
   }
 
   Future<void> _toggleFriend(bool isFriend) async {
@@ -81,7 +80,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
     );
     setState(() {
       _friendDataFuture = _fetchFriendData();
-      _sharedGoalsFuture = _fetchSharedGoals();
+      _sharedGoalsStream = _fetchSharedGoalsStream();
     });
   }
 
@@ -312,10 +311,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                FutureBuilder<List<Goal>>(
-                  future: _sharedGoalsFuture,
+                StreamBuilder<List<Goal>>(
+                  stream: _sharedGoalsStream,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting &&
+                        !snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
@@ -341,19 +341,19 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
                               goal.isCompleted,
                             );
                             setState(
-                              () => _sharedGoalsFuture = _fetchSharedGoals(),
+                              () => _sharedGoalsStream = _fetchSharedGoalsStream(),
                             );
                           },
                           onEdit: (updatedGoal) async {
                             await _firestoreService.updateGoal(updatedGoal);
                             setState(
-                              () => _sharedGoalsFuture = _fetchSharedGoals(),
+                              () => _sharedGoalsStream = _fetchSharedGoalsStream(),
                             );
                           },
                           onDelete: () async {
                             await _firestoreService.deleteGoal(goal.id);
                             setState(
-                              () => _sharedGoalsFuture = _fetchSharedGoals(),
+                              () => _sharedGoalsStream = _fetchSharedGoalsStream(),
                             );
                           },
                           users: {
